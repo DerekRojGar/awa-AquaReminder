@@ -4,6 +4,7 @@ import flet as ft
 from ui.pages.onboarding import create_onboarding_page, is_onboarding_completed
 from ui.pages.home import create_home_page
 from ui.pages.profile_setup import create_profile_setup_page
+from ui.pages.history import create_history_page
 from services.profile_service import has_profile_data
 
 
@@ -44,6 +45,8 @@ def main(page: ft.Page):
             # Con datos -> home directo
             if page.route == "/" or page.route == "":
                 page.views.append(create_home_page(page))
+            elif page.route.startswith("/history"):
+                page.views.append(create_history_page(page))
             elif page.route.startswith("/onboarding") or page.route == "/setup":
                 page.go("/")
                 return

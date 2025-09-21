@@ -11,8 +11,8 @@ Aplicación móvil desarrollada con **Flet (Python + Flutter)** para ayudar al u
 1. [Objetivo y alcance](#objetivo-y-alcance)  
 2. [Visión general de la arquitectura](#visión-general-de-la-arquitectura)  
 3. [Estructura de carpetas](#estructura-de-carpetas)  
-4. [Patrones de UI: componentes en Flet](#patrones-de-ui-componentes-en-flet)  
-5. [Estado y comunicación entre componentes](#estado-y-comunicación-entre-componentes)  
+4. [Patrones de UI: páginas en Flet (sin UserControl)](#patrones-de-ui-páginas-en-flet-sin-usercontrol)  
+5. [Estado y flujo entre páginas](#estado-y-flujo-entre-páginas)  
 6. [Servicios y separación de responsabilidades](#servicios-y-separación-de-responsabilidades)  
 7. [Notificaciones locales: estrategia y limitaciones](#notificaciones-locales-estrategia-y-limitaciones)  
 8. [Flujo de desarrollo y checklist de validación](#flujo-de-desarrollo-y-checklist-de-validación)  
@@ -36,13 +36,13 @@ Aplicación móvil desarrollada con **Flet (Python + Flutter)** para ayudar al u
 
 ## Visión general de la arquitectura
 
-Arquitectura en capas, modular, para mantener claridad y facilidad de mantenimiento:
+Arquitectura en capas, simple y mantenible:
 
 - **UI**  
-  Pantallas (“pages”) y componentes reutilizables (`UserControl`), solo para presentación / interacción.
+  Páginas (Views) construidas como funciones y retornadas directamente; navegación por rutas (`page.go()`), sin `UserControl` ni carpeta de componentes.
 
-- **Estado global**  
-  `AppState`: mantiene valores actuales como perfil de usuario, entradas de agua, configuración de recordatorios; permite suscripción de componentes.
+- **Estado de UI**  
+  Estado mínimo, local por página o por módulo (por ejemplo, onboarding por rutas `/onboarding/1..3`)
 
 - **Servicios (business logic)**  
   Lógica de métricas, persistencia (base de datos local), recordatorios, notificaciones.
@@ -51,7 +51,7 @@ Arquitectura en capas, modular, para mantener claridad y facilidad de mantenimie
   Estructuras que representan ingesta, usuario, configuraciones, etc.
 
 - **Parte nativa / extensiones**  
-  Sólo para código Android que permita notificaciones locales confiables en background.
+  Código Android necesario para notificaciones locales confiables en background.
 
 ---
 
@@ -60,7 +60,6 @@ Arquitectura en capas, modular, para mantener claridad y facilidad de mantenimie
 awa-aquareminder/
 ├─ app/
 │ ├─ main.py
-│ ├─ app_state.py
 │ ├─ config.py
 │ ├─ models/
 │ │ ├─ intake.py
@@ -72,21 +71,17 @@ awa-aquareminder/
 │ │ ├─ reminders.py
 │ │ └─ notifications.py
 │ └─ ui/
-│   ├─ pages/
-│   │ ├─ home.py
-│   │ ├─ history.py
-│   │ ├─ profile.py
-│   │ └─ settings.py
-│   └─ components/
-│     ├─ progress_with_label.py
-│     ├─ quick_intake_button.py
-│     ├─ graph_view.py
-│     └─ other reutilizables...
+│   └─ pages/
+│      ├─ onboarding.py
+│      ├─ home.py
+│      ├─ history.py
+│      ├─ profile.py
+│      └─ settings.py
 ├─ assets/
 │ ├─ icons/
 │ └─ images/
 ├─ native/
-│ └─ android_ext_code/ # código para extensión de notificaciones
+│ └─ android_ext_code/
 ├─ tests/
 ├─ requirements.txt
 ├─ README.md
@@ -97,71 +92,63 @@ awa-aquareminder/
 | Carpeta | Contenido / responsabilidad |
 |--------|-----------------------------|
 | `app` | Código fuente principal de la aplicación. |
-| `app_state.py` | Estado global, suscripciones de UI, cambio de valores. |
-| `config.py` | Constantes; valores por defecto (meta diaria, intervalos, etc.). |
+| `config.py` | Constantes y estilos (paleta de colores, tamaños, etc.). |
 | `models/` | Definición de estructuras de datos: ingesta, usuario, ajustes de recordatorio. |
 | `services/db.py` | Persistencia local (SQLite): agregar ingesta, leer datos. |
 | `services/metrics.py` | Lógica de cálculo de IMC, promedios, streaks, etc. |
-| `services/reminders.py` | Lógica que decide *cuándo* debe recordarse beber agua. |
-| `services/notifications.py` | Interfaz/adapter para programación de notificaciones; puede tener múltiples implementaciones. |
-| `ui/pages/` | Pantallas completas para el usuario: Home, Historial, Perfil, Ajustes. |
-| `ui/components/` | Componentes reutilizables: botones, gráficas, barra de progreso, etc. |
-| `native/android_ext_code/` | Código específico de Android (Java/Kotlin / Plugin Flutter) para manejar notificaciones locales confiables. |
+| `services/reminders.py` | Lógica que decide cuándo debe recordarse beber agua. |
+| `services/notifications.py` | Interfaz/adapter para programar notificaciones (dev y nativa). |
+| `ui/pages/` | Páginas de la app (Views) renderizadas directamente; sin componentes separados. |
+| `native/android_ext_code/` | Código Android para manejar notificaciones locales confiables. |
 
 ---
 
-## Patrones de UI: componentes en Flet
+## Patrones de UI: páginas en Flet (sin UserControl)
 
-- Utilizar `UserControl` para componentes que combinan varios controles, tienen estado local o lógica de actualización (ej. barra de progreso con etiqueta, gráfica, botón rápido).  
-- Pantallas (“pages”) ensamblan esos componentes. Cada página es también un `UserControl`.  
-- Componentes simples que no requieren lógica interna pueden ser funciones o clases muy ligeras.  
-- Reutilizar componentes que aparecen en varias páginas, evitando duplicar código.  
-- Mantener estilos comunes (colores, fuentes, márgenes) en un módulo de estilos/configuración (`config.py` u `ui/common_styles`).
+- Construir cada pantalla como una función que retorna un `ft.View` o controles que se agregan a la `page`.
+- Sin `UserControl` ni carpeta de componentes; mantener la UI simple y directa por página.
+- Estilos compartidos desde `config.py` (colores, tamaños, espaciados) para consistencia visual.
+- Navegación con `page.go("/ruta")` y rutas claras (ej. `/`, `/onboarding/1..3`, `/settings`).
+- Mantener el layout sencillo (Column/Row/Container) y reutilizar patrones dentro de la misma página cuando sea necesario.
 
 ---
 
-## Estado y comunicación entre componentes
+## Estado y flujo entre páginas
 
-- `AppState` central como punto único de verdad: perfil de usuario, metas, entradas, configuraciones.  
-- Componentes se **suscriben** al `AppState` para recibir notificaciones de cambio.  
-- Cuando servicios modifican datos (por ejemplo, al guardar una nueva ingesta o al actualizar configuración de recordatorio), deben llamar a `AppState.notify()`.  
-- Componentes que escuchan usan su método de actualización (`update()` en `UserControl`) para refrescar visual.  
-- Esta separación minimiza acoplamientos entre UI y lógica de negocio.
+- Estado mínimo y local por página; evitar estados globales complejos cuando no sean necesarios.
+- Onboarding manejado por rutas (`/onboarding/1`, `/onboarding/2`, `/onboarding/3`) y lógica de botones siguiente/atrás.
+- Cuando se complete el onboarding, redirigir a `/` (home). Persistencia futura opcional si se requiere recordar la finalización entre sesiones.
+- Para casos más complejos (perfil, métricas), delegar lectura/escritura a `services/` y mantener la UI reactiva solo a datos cargados.
 
 ---
 
 ## Servicios y separación de responsabilidades
 
-- **DB**: todas las operaciones de lectura/escritura se hacen en `services/db.py` — UI no debe acceder directamente a la base de datos.  
+- **DB**: todas las operaciones de lectura/escritura se hacen en `services/db.py` — la UI no accede directamente a la base de datos.  
 - **Metrics**: funciones puras para calcular IMC, promedios, streaks, valores históricos para gráficas.  
-- **Reminders**: lógica para calcular cuándo se debe disparar notificación basado en:
-  1. Configuración del usuario (intervalos, horarios permitidos, snooze).  
-  2. Última ingesta registrada.  
-  Luego delega al `NotificationService` la tarea de programarla.  
-- **NotificationService**: adapter / interfaz. Hay al menos dos implementaciones:
-  - Una “dev” para pruebas y desarrollo.  
-  - Una nativa para Android con notificaciones locales confiables.  
+- **Reminders**: lógica para calcular cuándo se debe disparar una notificación según configuración y última ingesta.  
+- **NotificationService**: adapter con implementación de desarrollo y otra nativa para Android.
 
 ---
 
 ## Notificaciones locales: estrategia y limitaciones
 
-- **Objetivo**: que los recordatorios funcionen incluso si la app está cerrada.  
-- **En desarrollo**: usar librería comunitaria o fallback “dev implementation” para validar lógica, interfaz, horarios, snooze.  
-- **Producción (Android)**: implementar extensión nativa (user extension de Flet) con `flutter_local_notifications` para programar notificaciones locales.  
-- **Permisos**: solicitar permisos de notificación al usuario al instalar o al iniciar app.  
-- **Limitaciones posibles**: versiones de Android con restricciones de batería, OEMs agresivos con background tasks, permisos de usuario. Probar en dispositivos reales.  
+- **Objetivo**: recordatorios funcionales incluso si la app está cerrada.  
+- **En desarrollo**: usar implementación de desarrollo para validar lógica, horarios, snooze.  
+- **Producción (Android)**: extensión nativa con `flutter_local_notifications` para programar notificaciones locales.  
+- **Permisos**: solicitar permisos al instalar o al iniciar app.  
+- **Limitaciones**: restricciones de batería, OEMs agresivos, permisos. Probar en dispositivos reales.
 
 ---
 
 ## Flujo de desarrollo y checklist de validación
 
-1. Diseñar UI minimalista + perfil + lógica de métricas.  
+1. Diseñar UI minimalista (páginas) + perfil + lógica de métricas.  
 2. Persistir datos con SQLite local.  
-3. Implementar recordatorios automáticos basados en la última ingesta, usando el adapter dev.  
-4. Crear pantalla de “Ajustes” que permita configurar intervalos, horarios permitidos, snooze, activación/desactivación.  
-5. Crear extensión Android y reemplazar adapter dev por implementación nativa para notificaciones fiables.  
-6. Probar en dispositivo real: notificaciones con app cerrada + app abierta + acciones de snooze.  
+3. Implementar recordatorios automáticos basados en la última ingesta (adapter dev).  
+4. Pantalla de “Ajustes” para intervalos, horarios permitidos, snooze, on/off.  
+5. Extensión Android y reemplazar adapter dev por implementación nativa.  
+6. Probar en dispositivo real: notificaciones con app cerrada/abierta + snooze.
 
 **Checklist mínimo:**
 
@@ -169,21 +156,21 @@ awa-aquareminder/
 - [ ] Perfil con cálculo de IMC.  
 - [ ] Métricas: promedio semanal, streaks, gráfica.  
 - [ ] Progreso diario visible (barra + valor).  
-- [ ] Recordatorios locales funcionan con app cerrada.  
+- [ ] Recordatorios locales con app cerrada.  
 - [ ] Permisos solicitados correctamente.  
-- [ ] Datos persistentes entre cierres de app / reinicios.
+- [ ] Datos persistentes entre cierres / reinicios.
 
 ---
 
 ## Convenciones y buenas prácticas
 
-- **Nomenclatura**: clases en `PascalCase`, archivos en `snake_case`.  
-- **Componentes**: piezas reutilizables como `UserControl`.  
-- **Lógica fuera de UI**: UI solo presentaciones + eventos; servicios hacen cálculos, persistencia.  
-- **Constantes / configuraciones** en un archivo central (`config.py`).  
+- **Nomenclatura**: archivos en `snake_case`.  
+- **Páginas**: funciones simples que retornan Views/controles (sin `UserControl`).  
+- **Lógica fuera de UI**: UI para presentación + eventos; servicios hacen cálculos y persistencia.  
+- **Constantes/estilos** centralizados en `config.py`.  
 - **Estilo coherente**: colores, tipografía, márgenes uniformes.  
-- **Pruebas unitarias** (mínimo para servicios/DB/metrics).  
-- **Documentación mínima**: docstrings + comentarios clave.
+- **Pruebas** mínimas para servicios/DB/metrics.  
+- **Documentación**: docstrings + comentarios clave.
 
 ---
 
@@ -191,26 +178,25 @@ awa-aquareminder/
 
 - Sincronización / respaldo en la nube.  
 - Recordatorios push remotos o ajustes vía servidor.  
-- Personalización avanzada de notificaciones: sonidos, vibraciones, horarios “no molestar”.  
-- Más visuales o panoramas estadísticos, recomendaciones automáticas.
+- Personalización avanzada de notificaciones.  
+- Más visuales y recomendaciones basadas en hábitos.
 
 ---
 
 ## Referencias clave
 
-- Flet — custom controls / `UserControl`.  
-- Flet — user extensions (integrar paquetes Flutter externos).  
+- Flet — rutas y navegación (`page.go`).  
 - Flet — build / publish Android (APK / AAB).  
-- `flutter_local_notifications` — para notificaciones locales confiables en Android.  
-- `flet_notifications` u otras librerías dev como fallback.
+- `flutter_local_notifications` — notificaciones locales en Android.  
+- Librerías dev para notificaciones como fallback.
 
 ---
 
 **Licencia / privacidad**
 
-- Datos personales anónimos, usados localmente, sin cuentas de usuario.  
-- Permisos de notificación solicitados claramente, explicando beneficio al usuario.
+- Datos locales, sin cuentas de usuario.  
+- Permisos de notificación solicitados con una explicación clara del beneficio.
 
 ---
 
-*Fin del README*  
+*Fin del README*

@@ -1,6 +1,7 @@
 import flet as ft
 from config import Colors, Design
 from services.intake_service import add_intake, get_today_total
+from services.profile_service import load_profile
 
 
 def _current_tab_index(route: str) -> int:
@@ -53,14 +54,19 @@ def _bottom_nav(page: ft.Page):
     )
 
 
-def _quick_button(text: str, amount_ml: int, page: ft.Page):
+def _quick_button(text: str, amount_ml: int, page: ft.Page, goal_ml: int, total_text: ft.Text, progress_bar: ft.ProgressBar, progress_text: ft.Text):
     def on_click(e):
         add_intake(amount_ml)
         # Feedback visual
         page.snack_bar = ft.SnackBar(ft.Text(f"+{amount_ml} ml registrados"), bgcolor=Colors.PRIMARY)
         page.snack_bar.open = True
-        # Actualizar total
-        total_text.value = f"{get_today_total()} ml"
+        # Actualizar total y progreso
+        total = get_today_total()
+        total_text.value = f"{total} ml"
+        ratio = min(total / max(goal_ml, 1), 1.0)
+        progress_bar.value = ratio
+        progress_bar.color = Colors.SUCCESS if ratio >= 1.0 else Colors.PRIMARY
+        progress_text.value = f"{total} / {goal_ml} ml"
         page.update()
     return ft.ElevatedButton(
         text,
@@ -76,21 +82,24 @@ def _quick_button(text: str, amount_ml: int, page: ft.Page):
 
 
 def create_home_page(page: ft.Page):
-    # Total diario
-    global total_text
-    total_text = ft.Text("0 ml", size=40, weight=ft.FontWeight.BOLD, color=Colors.TEXT_PRIMARY)
-    total_text.value = f"{get_today_total()} ml"
+    # Cargar meta desde el perfil
+    profile = load_profile() or {}
+    goal_ml = int(profile.get("daily_goal_ml", 2000) or 2000)
+
+    # Total diario inicial
+    total = get_today_total()
+    total_text = ft.Text(f"{total} ml", size=40, weight=ft.FontWeight.BOLD, color=Colors.TEXT_PRIMARY)
+
+    # Barra de progreso
+    ratio = min(total / max(goal_ml, 1), 1.0)
+    progress_bar = ft.ProgressBar(value=ratio, color=Colors.SUCCESS if ratio >= 1.0 else Colors.PRIMARY, bgcolor=Colors.GREY_LIGHT)
+    progress_text = ft.Text(f"{total} / {goal_ml} ml", size=12, color=Colors.TEXT_SECONDARY)
 
     # Encabezado minimalista
     header = ft.Container(
         content=ft.Row(
             [
-                ft.Text(
-                    "awa",
-                    size=22,
-                    weight=ft.FontWeight.BOLD,
-                    color=Colors.TEXT_LIGHT,
-                ),
+                ft.Text("awa", size=22, weight=ft.FontWeight.BOLD, color=Colors.TEXT_LIGHT),
                 ft.Container(expand=True),
                 ft.Icon(ft.Icons.WATER_DROP, color=Colors.TEXT_LIGHT),
             ]
@@ -105,7 +114,11 @@ def create_home_page(page: ft.Page):
             [
                 ft.Text("Consumo de hoy", size=14, color=Colors.TEXT_SECONDARY),
                 total_text,
-                ft.Text("Meta 2000 ml", size=12, color=Colors.GREY_SAGE),
+                ft.Container(height=8),
+                progress_bar,
+                ft.Container(height=6),
+                progress_text,
+                ft.Text(f"Meta {goal_ml} ml", size=12, color=Colors.GREY_SAGE),
             ],
             spacing=6,
             horizontal_alignment=ft.CrossAxisAlignment.START,
@@ -118,9 +131,9 @@ def create_home_page(page: ft.Page):
     # Acciones rápidas (tres tamaños)
     quick_actions = ft.Row(
         [
-            _quick_button("+250 ml", 250, page),
-            _quick_button("+350 ml", 350, page),
-            _quick_button("+500 ml", 500, page),
+            _quick_button("+250 ml", 250, page, goal_ml, total_text, progress_bar, progress_text),
+            _quick_button("+350 ml", 350, page, goal_ml, total_text, progress_bar, progress_text),
+            _quick_button("+500 ml", 500, page, goal_ml, total_text, progress_bar, progress_text),
         ],
         alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
     )
@@ -158,11 +171,7 @@ def create_home_page(page: ft.Page):
 
     return ft.View(
         "/",
-        [
-            header,
-            body,
-            _bottom_nav(page),
-        ],
+        [header, body, _bottom_nav(page)],
         padding=ft.padding.all(0),
         bgcolor=Colors.BACKGROUND,
     )

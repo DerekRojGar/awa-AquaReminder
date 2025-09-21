@@ -82,9 +82,32 @@ def _quick_button(text: str, amount_ml: int, page: ft.Page, goal_ml: int, total_
 
 
 def create_home_page(page: ft.Page):
-    # Cargar meta desde el perfil
+    # Cargar meta y datos del perfil
     profile = load_profile() or {}
     goal_ml = int(profile.get("daily_goal_ml", 2000) or 2000)
+    user_name = (profile.get("name") or "").strip()
+    avatar_id = int(profile.get("avatar_id", 0) or 0)
+
+    # Avatar (mismo set que en perfil)
+    avatar_options = [
+        {"icon": ft.Icons.WATER_DROP, "bg": Colors.PRIMARY},
+        {"icon": ft.Icons.PERSON, "bg": Colors.SECONDARY},
+        {"icon": ft.Icons.FAVORITE, "bg": Colors.SUCCESS},
+        {"icon": ft.Icons.BOLT, "bg": Colors.WARNING},
+        {"icon": ft.Icons.PETS, "bg": "#8e44ad"},
+        {"icon": ft.Icons.EMOJI_EMOTIONS, "bg": "#e67e22"},
+    ]
+    a = avatar_options[avatar_id % len(avatar_options)]
+    avatar = ft.Container(
+        content=ft.Icon(a["icon"], size=22, color=Colors.TEXT_LIGHT),
+        width=36,
+        height=36,
+        bgcolor=a["bg"],
+        border_radius=18,
+        alignment=ft.alignment.center,
+        on_click=lambda e: page.go("/profile"),
+        tooltip="Editar perfil",
+    )
 
     # Total diario inicial
     total = get_today_total()
@@ -95,13 +118,14 @@ def create_home_page(page: ft.Page):
     progress_bar = ft.ProgressBar(value=ratio, color=Colors.SUCCESS if ratio >= 1.0 else Colors.PRIMARY, bgcolor=Colors.GREY_LIGHT)
     progress_text = ft.Text(f"{total} / {goal_ml} ml", size=12, color=Colors.TEXT_SECONDARY)
 
-    # Encabezado minimalista
+    # Encabezado con nombre y avatar
+    title_text = f"Hola, {user_name}" if user_name else "awa"
     header = ft.Container(
         content=ft.Row(
             [
-                ft.Text("awa", size=22, weight=ft.FontWeight.BOLD, color=Colors.TEXT_LIGHT),
+                ft.Text(title_text, size=22, weight=ft.FontWeight.BOLD, color=Colors.TEXT_LIGHT),
                 ft.Container(expand=True),
-                ft.Icon(ft.Icons.WATER_DROP, color=Colors.TEXT_LIGHT),
+                avatar,
             ]
         ),
         bgcolor=Colors.PRIMARY,

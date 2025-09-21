@@ -57,7 +57,7 @@ Arquitectura en capas, modular, para mantener claridad y facilidad de mantenimie
 
 ## Estructura de carpetas
 ```bash
-water_minder/
+awa-aquareminder/
 ├─ app/
 │ ├─ main.py
 │ ├─ app_state.py

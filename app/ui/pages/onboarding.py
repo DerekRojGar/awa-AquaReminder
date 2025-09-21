@@ -67,7 +67,8 @@ def create_onboarding_page(page: ft.Page) -> ft.View:
     def on_finish(e):
         global onboarding_completed
         onboarding_completed = True
-        e.page.go("/")
+        # Ir a setup para capturar datos de perfil si aún no existen
+        e.page.go("/setup")
 
     # Indicadores
     indicators = [

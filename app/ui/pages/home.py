@@ -1,5 +1,6 @@
 import flet as ft
 from config import Colors, Design
+from services.intake_service import add_intake, get_today_total
 
 
 def _current_tab_index(route: str) -> int:
@@ -52,7 +53,15 @@ def _bottom_nav(page: ft.Page):
     )
 
 
-def _quick_button(text: str, on_click):
+def _quick_button(text: str, amount_ml: int, page: ft.Page):
+    def on_click(e):
+        add_intake(amount_ml)
+        # Feedback visual
+        page.snack_bar = ft.SnackBar(ft.Text(f"+{amount_ml} ml registrados"), bgcolor=Colors.PRIMARY)
+        page.snack_bar.open = True
+        # Actualizar total
+        total_text.value = f"{get_today_total()} ml"
+        page.update()
     return ft.ElevatedButton(
         text,
         on_click=on_click,
@@ -67,6 +76,11 @@ def _quick_button(text: str, on_click):
 
 
 def create_home_page(page: ft.Page):
+    # Total diario
+    global total_text
+    total_text = ft.Text("0 ml", size=40, weight=ft.FontWeight.BOLD, color=Colors.TEXT_PRIMARY)
+    total_text.value = f"{get_today_total()} ml"
+
     # Encabezado minimalista
     header = ft.Container(
         content=ft.Row(
@@ -90,7 +104,7 @@ def create_home_page(page: ft.Page):
         content=ft.Column(
             [
                 ft.Text("Consumo de hoy", size=14, color=Colors.TEXT_SECONDARY),
-                ft.Text("0 ml", size=40, weight=ft.FontWeight.BOLD, color=Colors.TEXT_PRIMARY),
+                total_text,
                 ft.Text("Meta 2000 ml", size=12, color=Colors.GREY_SAGE),
             ],
             spacing=6,
@@ -101,12 +115,12 @@ def create_home_page(page: ft.Page):
         border_radius=16,
     )
 
-    # Acciones rápidas
+    # Acciones rápidas (tres tamaños)
     quick_actions = ft.Row(
         [
-            _quick_button("+250 ml", lambda e: None),
-            _quick_button("+350 ml", lambda e: None),
-            _quick_button("+500 ml", lambda e: None),
+            _quick_button("+250 ml", 250, page),
+            _quick_button("+350 ml", 350, page),
+            _quick_button("+500 ml", 500, page),
         ],
         alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
     )

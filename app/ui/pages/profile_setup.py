@@ -84,51 +84,64 @@ def _build_profile_page(page: ft.Page, *, view_route: str, header_title: str, he
         value=str(existing.get("daily_goal_ml", "")),
     )
 
-    # Avatares predefinidos (icono + color)
-    avatar_options = [
-        {"icon": ft.Icons.WATER_DROP, "bg": Colors.PRIMARY},
-        {"icon": ft.Icons.PERSON, "bg": Colors.SECONDARY},
-        {"icon": ft.Icons.FAVORITE, "bg": Colors.SUCCESS},
-        {"icon": ft.Icons.BOLT, "bg": Colors.WARNING},
-        {"icon": ft.Icons.PETS, "bg": "#8e44ad"},
-        {"icon": ft.Icons.EMOJI_EMOTIONS, "bg": "#e67e22"},
+    # Avatares por imagen con rutas absolutas
+    import os
+    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+    avatares_dir = os.path.join(project_root, "src", "assets", "avatares")
+    
+    avatar_files = [
+        os.path.join(avatares_dir, "Avatar1.jpg"),
+        os.path.join(avatares_dir, "Avatar2.jpg"),
+        os.path.join(avatares_dir, "Avatar3.jpg"),
+        os.path.join(avatares_dir, "Avatar4.jpg"),
     ]
     sel = {"index": int(existing.get("avatar_id", 0)) if str(existing.get("avatar_id", "")).isdigit() else 0}
 
+    # Preview circular más grande
     def avatar_preview_control():
-        opt = avatar_options[sel["index"]]
+        src = avatar_files[sel["index"] % len(avatar_files)]
         return ft.Container(
-            content=ft.Icon(opt["icon"], size=40, color=Colors.TEXT_LIGHT),
-            width=72,
-            height=72,
-            bgcolor=opt["bg"],
-            border_radius=36,
+            width=80,
+            height=80,
+            content=ft.Image(src, fit=ft.ImageFit.COVER, width=80, height=80),
+            bgcolor=Colors.ACCENT,
             alignment=ft.alignment.center,
+            border=ft.border.all(2, Colors.GREY_LIGHT),
+            border_radius=40,
+            clip_behavior=ft.ClipBehavior.ANTI_ALIAS,
         )
 
     avatar_preview = avatar_preview_control()
 
+    # Miniaturas circulares más grandes
     def make_avatar_chip(i: int):
-        opt = avatar_options[i]
-        border = ft.border.all(3, Colors.PRIMARY) if sel["index"] == i else ft.border.all(1, Colors.GREY_LIGHT)
+        src = avatar_files[i]
+        selected = sel["index"] == i
         return ft.Container(
-            content=ft.Icon(opt["icon"], size=20, color=Colors.TEXT_LIGHT),
-            width=40,
-            height=40,
-            bgcolor=opt["bg"],
-            border_radius=20,
-            alignment=ft.alignment.center,
-            border=border,
+            width=64,
+            height=64,
+            content=ft.Image(src, fit=ft.ImageFit.COVER, width=64, height=64),
+            bgcolor=Colors.ACCENT,
+            border=ft.border.all(4, Colors.PRIMARY) if selected else ft.border.all(2, Colors.GREY_LIGHT),
+            border_radius=32,
+            clip_behavior=ft.ClipBehavior.ANTI_ALIAS,
             on_click=lambda e, idx=i: select_avatar(idx),
+            tooltip="Seleccionar",
         )
+
+    avatar_row = ft.Row([], spacing=10, wrap=True)
+
+    def refresh_avatar_row():
+        avatar_row.controls = [make_avatar_chip(i) for i in range(len(avatar_files))]
 
     def select_avatar(i: int):
         sel["index"] = i
-        avatar_preview.content = ft.Icon(avatar_options[i]["icon"], size=40, color=Colors.TEXT_LIGHT)
-        avatar_preview.bgcolor = avatar_options[i]["bg"]
+        new_src = avatar_files[i]
+        avatar_preview.content = ft.Image(new_src, fit=ft.ImageFit.COVER, width=80, height=80)
+        refresh_avatar_row()
         page.update()
 
-    avatar_row = ft.Row([make_avatar_chip(i) for i in range(len(avatar_options))], spacing=8)
+    refresh_avatar_row()
 
     # Resumen en vivo
     bmi_value = ft.Text("—", size=24, weight=ft.FontWeight.BOLD, color=Colors.TEXT_PRIMARY)
@@ -215,7 +228,7 @@ def _build_profile_page(page: ft.Page, *, view_route: str, header_title: str, he
         padding=ft.padding.symmetric(horizontal=16, vertical=14),
     )
 
-    # Tarjeta de avatar + nombre
+    # Tarjeta de avatar + nombre (preview circular)
     avatar_card = ft.Container(
         content=ft.Row([
             avatar_preview,

@@ -88,23 +88,24 @@ def create_home_page(page: ft.Page):
     user_name = (profile.get("name") or "").strip()
     avatar_id = int(profile.get("avatar_id", 0) or 0)
 
-    # Avatar (mismo set que en perfil)
-    avatar_options = [
-        {"icon": ft.Icons.WATER_DROP, "bg": Colors.PRIMARY},
-        {"icon": ft.Icons.PERSON, "bg": Colors.SECONDARY},
-        {"icon": ft.Icons.FAVORITE, "bg": Colors.SUCCESS},
-        {"icon": ft.Icons.BOLT, "bg": Colors.WARNING},
-        {"icon": ft.Icons.PETS, "bg": "#8e44ad"},
-        {"icon": ft.Icons.EMOJI_EMOTIONS, "bg": "#e67e22"},
+    # Avatar por imagen con ruta absoluta
+    import os
+    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+    avatares_dir = os.path.join(project_root, "src", "assets", "avatares")
+    
+    avatar_files = [
+        os.path.join(avatares_dir, "Avatar1.jpg"),
+        os.path.join(avatares_dir, "Avatar2.jpg"),
+        os.path.join(avatares_dir, "Avatar3.jpg"),
+        os.path.join(avatares_dir, "Avatar4.jpg"),
     ]
-    a = avatar_options[avatar_id % len(avatar_options)]
+    src = avatar_files[avatar_id % len(avatar_files)]
     avatar = ft.Container(
-        content=ft.Icon(a["icon"], size=22, color=Colors.TEXT_LIGHT),
-        width=36,
-        height=36,
-        bgcolor=a["bg"],
-        border_radius=18,
-        alignment=ft.alignment.center,
+        content=ft.Image(src, fit=ft.ImageFit.COVER, width=40, height=40),
+        width=40,
+        height=40,
+        border_radius=20,
+        clip_behavior=ft.ClipBehavior.ANTI_ALIAS,
         on_click=lambda e: page.go("/profile"),
         tooltip="Editar perfil",
     )

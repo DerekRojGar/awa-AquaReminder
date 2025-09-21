@@ -15,8 +15,13 @@ def _data_dir() -> str:
     return d
 
 
-def db_path() -> str:
+def _get_db_path() -> str:
+    """Función pública para obtener la ruta de la BD (usada por profile_service)."""
     return os.path.join(_data_dir(), "intake.db")
+
+
+def db_path() -> str:
+    return _get_db_path()
 
 
 def init_db() -> None:

@@ -4,8 +4,8 @@ from typing import Optional
 
 
 def _project_root() -> str:
-    # This file is in app/services -> go to repo root
-    return os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+    # This file is in app/services -> go up 2 levels to repo root
+    return os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 
 
 def _data_dir() -> str:
@@ -41,3 +41,32 @@ def has_profile_data() -> bool:
         return False
     required = {"weight_kg", "height_cm", "daily_goal_ml"}
     return required.issubset(data.keys())
+
+
+def delete_profile() -> bool:
+    """Elimina el archivo de perfil. Retorna True si se eliminó o no existía."""
+    p = profile_file_path()
+    try:
+        if os.path.exists(p):
+            os.remove(p)
+        return True
+    except Exception:
+        return False
+
+
+def reset_app_data() -> bool:
+    """Elimina todos los datos de la app (perfil y base de datos)."""
+    try:
+        # Eliminar perfil
+        delete_profile()
+        
+        # Eliminar base de datos de ingestas
+        from .intake_service import _get_db_path
+        db_path = _get_db_path()
+        if os.path.exists(db_path):
+            os.remove(db_path)
+        
+        return True
+    except Exception as e:
+        print(f"Error al resetear datos: {e}")
+        return False

@@ -5,6 +5,7 @@ from ui.pages.onboarding import create_onboarding_page, is_onboarding_completed
 from ui.pages.home import create_home_page
 from ui.pages.profile_setup import create_profile_setup_page, create_profile_page
 from ui.pages.history import create_history_page
+from ui.pages.settings import create_settings_page
 from services.profile_service import has_profile_data
 
 
@@ -25,6 +26,11 @@ def main(page: ft.Page):
     page.padding = 0
     page.window_width = 400
     page.window_height = 700
+
+    # Servir assets estáticos (imágenes, avatares)
+    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    assets_dir = os.path.join(project_root, "src", "assets")
+    page.assets_dir = assets_dir
 
     # Router/navegación entre páginas
     def route_change(route):
@@ -49,6 +55,8 @@ def main(page: ft.Page):
                 page.views.append(create_history_page(page))
             elif page.route.startswith("/profile"):
                 page.views.append(create_profile_page(page))
+            elif page.route.startswith("/settings"):
+                page.views.append(create_settings_page(page))
             elif page.route.startswith("/onboarding") or page.route == "/setup":
                 page.go("/")
                 return

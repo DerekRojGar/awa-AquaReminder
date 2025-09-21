@@ -1,68 +1,154 @@
 import flet as ft
 from config import Colors, Design
 
-def create_home_page(page):
+
+def _current_tab_index(route: str) -> int:
+    if route in ("/", ""):  # inicio
+        return 0
+    if route.startswith("/history"):
+        return 1
+    if route.startswith("/profile"):
+        return 2
+    if route.startswith("/settings"):
+        return 3
+    return 0
+
+
+def _nav_item(label: str, icon, active: bool, on_click):
+    color = Colors.PRIMARY if active else Colors.GREY_SAGE
+    text_color = Colors.TEXT_PRIMARY if active else Colors.GREY_SAGE
+    return ft.Container(
+        content=ft.Column(
+            [
+                ft.Icon(icon, size=24, color=color),
+                ft.Text(label, size=12, color=text_color),
+            ],
+            spacing=4,
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+        ),
+        padding=ft.padding.symmetric(vertical=12, horizontal=8),
+        on_click=on_click,
+        expand=True,
+    )
+
+
+def _bottom_nav(page: ft.Page):
+    idx = _current_tab_index(page.route)
+
+    return ft.Container(
+        content=ft.Row(
+            [
+                _nav_item("Inicio", ft.Icons.HOME, idx == 0, lambda e: page.go("/")),
+                _nav_item("Historial", ft.Icons.HISTORY, idx == 1, lambda e: page.go("/history")),
+                _nav_item("Perfil", ft.Icons.PERSON, idx == 2, lambda e: page.go("/profile")),
+                _nav_item("Ajustes", ft.Icons.SETTINGS, idx == 3, lambda e: page.go("/settings")),
+            ],
+            alignment=ft.MainAxisAlignment.SPACE_EVENLY,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        ),
+        bgcolor=Colors.ACCENT,
+        padding=ft.padding.only(left=16, right=16, top=6, bottom=6),
+        border=ft.border.only(top=ft.border.BorderSide(1, Colors.GREY_LIGHT)),
+    )
+
+
+def _quick_button(text: str, on_click):
+    return ft.ElevatedButton(
+        text,
+        on_click=on_click,
+        style=ft.ButtonStyle(
+            bgcolor=Colors.PRIMARY,
+            color=Colors.TEXT_LIGHT,
+            text_style=ft.TextStyle(size=Design.FONT_SIZE_NORMAL, weight=ft.FontWeight.BOLD),
+            shape=ft.RoundedRectangleBorder(radius=12),
+        ),
+        height=44,
+    )
+
+
+def create_home_page(page: ft.Page):
+    # Encabezado minimalista
+    header = ft.Container(
+        content=ft.Row(
+            [
+                ft.Text(
+                    "awa",
+                    size=22,
+                    weight=ft.FontWeight.BOLD,
+                    color=Colors.TEXT_LIGHT,
+                ),
+                ft.Container(expand=True),
+                ft.Icon(ft.Icons.WATER_DROP, color=Colors.TEXT_LIGHT),
+            ]
+        ),
+        bgcolor=Colors.PRIMARY,
+        padding=ft.padding.symmetric(horizontal=16, vertical=14),
+    )
+
+    # Tarjeta de progreso diario (simple y moderna)
+    daily_card = ft.Container(
+        content=ft.Column(
+            [
+                ft.Text("Consumo de hoy", size=14, color=Colors.TEXT_SECONDARY),
+                ft.Text("0 ml", size=40, weight=ft.FontWeight.BOLD, color=Colors.TEXT_PRIMARY),
+                ft.Text("Meta 2000 ml", size=12, color=Colors.GREY_SAGE),
+            ],
+            spacing=6,
+            horizontal_alignment=ft.CrossAxisAlignment.START,
+        ),
+        padding=ft.padding.all(20),
+        bgcolor=Colors.ACCENT,
+        border_radius=16,
+    )
+
+    # Acciones rápidas
+    quick_actions = ft.Row(
+        [
+            _quick_button("+250 ml", lambda e: None),
+            _quick_button("+350 ml", lambda e: None),
+            _quick_button("+500 ml", lambda e: None),
+        ],
+        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+    )
+
+    # Sugerencia / CTA secundaria
+    tip_card = ft.Container(
+        content=ft.Row(
+            [
+                ft.Icon(ft.Icons.NOTIFICATIONS_ACTIVE, color=Colors.PRIMARY),
+                ft.Text("Activa recordatorios para no olvidar hidratarte", color=Colors.TEXT_PRIMARY),
+            ],
+            spacing=10,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        ),
+        padding=ft.padding.all(14),
+        bgcolor=Colors.ACCENT,
+        border_radius=12,
+    )
+
+    body = ft.Container(
+        content=ft.Column(
+            [
+                daily_card,
+                ft.Container(height=Design.SPACING_LARGE),
+                quick_actions,
+                ft.Container(height=Design.SPACING_LARGE),
+                tip_card,
+            ],
+            spacing=Design.SPACING_LARGE,
+        ),
+        padding=ft.padding.symmetric(horizontal=16, vertical=16),
+        expand=True,
+        bgcolor=Colors.BACKGROUND,
+    )
+
     return ft.View(
         "/",
         [
-            ft.AppBar(
-                title=ft.Text(
-                    "awa - Hidratación",
-                    color=Colors.TEXT_LIGHT,
-                    size=Design.FONT_SIZE_MEDIUM,
-                    weight=ft.FontWeight.BOLD
-                ),
-                bgcolor=Colors.PRIMARY,
-                elevation=0
-            ),
-            ft.Container(
-                content=ft.Column([
-                    ft.Container(
-                        content=ft.Icon(
-                            ft.Icons.WATER_DROP,
-                            size=80,
-                            color=Colors.PRIMARY
-                        ),
-                        padding=ft.padding.only(top=Design.PADDING_LARGE)
-                    ),
-                    ft.Text(
-                        "¡Bienvenido a awa!",
-                        size=Design.FONT_SIZE_LARGE,
-                        weight=ft.FontWeight.BOLD,
-                        text_align=ft.TextAlign.CENTER,
-                        color=Colors.TEXT_PRIMARY
-                    ),
-                    ft.Text(
-                        "Tu panel principal estará aquí",
-                        size=Design.FONT_SIZE_NORMAL,
-                        text_align=ft.TextAlign.CENTER,
-                        color=Colors.TEXT_SECONDARY
-                    ),
-                    ft.Container(
-                        content=ft.ElevatedButton(
-                            text="Configurar perfil",
-                            style=ft.ButtonStyle(
-                                bgcolor=Colors.PRIMARY,
-                                color=Colors.TEXT_LIGHT,
-                                text_style=ft.TextStyle(
-                                    size=Design.FONT_SIZE_NORMAL,
-                                    weight=ft.FontWeight.BOLD
-                                ),
-                                shape=ft.RoundedRectangleBorder(radius=Design.BORDER_RADIUS_SMALL)
-                            ),
-                            width=200,
-                            height=50
-                        ),
-                        padding=ft.padding.only(top=Design.PADDING_LARGE)
-                    )
-                ], 
-                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                spacing=Design.SPACING_MEDIUM),
-                padding=ft.padding.all(Design.PADDING_LARGE),
-                alignment=ft.alignment.center,
-                expand=True,
-                bgcolor=Colors.ACCENT
-            )
-        ]
+            header,
+            body,
+            _bottom_nav(page),
+        ],
+        padding=ft.padding.all(0),
+        bgcolor=Colors.BACKGROUND,
     )
-            

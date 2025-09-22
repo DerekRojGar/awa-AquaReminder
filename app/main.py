@@ -24,13 +24,24 @@ def main(page: ft.Page):
     page.title = "awa - AquaReminder"
     page.theme_mode = ft.ThemeMode.LIGHT
     page.padding = 0
-    page.window_width = 400
-    page.window_height = 700
+    # Evitar forzar tamaño de ventana en Android; solo útil en desktop
+    try:
+        if page.platform in (ft.PagePlatform.WINDOWS, ft.PagePlatform.MACOS, ft.PagePlatform.LINUX):
+            page.window_width = 400
+            page.window_height = 700
+    except Exception:
+        pass
+    # Habilitar adaptación por plataforma
+    try:
+        page.adaptive = True
+    except Exception:
+        pass
 
-    # Servir assets estáticos (imágenes, avatares)
-    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-    assets_dir = os.path.join(project_root, "src", "assets")
-    page.assets_dir = assets_dir
+    # Icono de la ventana (ruta relativa al assets_dir)
+    try:
+        page.window_icon = "Icon.png"
+    except:
+        pass
 
     # Router/navegación entre páginas
     def route_change(route):
@@ -70,4 +81,5 @@ def main(page: ft.Page):
 
 
 if __name__ == "__main__":
-    ft.app(target=main)
+    # Importante: usar carpeta "assets" relativa a main.py para que se empaquete en app/app.zip
+    ft.app(target=main, assets_dir="assets")

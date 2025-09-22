@@ -88,16 +88,12 @@ def create_home_page(page: ft.Page):
     user_name = (profile.get("name") or "").strip()
     avatar_id = int(profile.get("avatar_id", 0) or 0)
 
-    # Avatar por imagen con ruta absoluta
-    import os
-    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
-    avatares_dir = os.path.join(project_root, "src", "assets", "avatares")
-    
+    # Avatar usando imágenes reales (dentro de assets/ del APK)
     avatar_files = [
-        os.path.join(avatares_dir, "Avatar1.jpg"),
-        os.path.join(avatares_dir, "Avatar2.jpg"),
-        os.path.join(avatares_dir, "Avatar3.jpg"),
-        os.path.join(avatares_dir, "Avatar4.jpg"),
+        "avatares/Avatar1.jpg",
+        "avatares/Avatar2.jpg",
+        "avatares/Avatar3.jpg",
+        "avatares/Avatar4.jpg",
     ]
     src = avatar_files[avatar_id % len(avatar_files)]
     avatar = ft.Container(
@@ -106,6 +102,9 @@ def create_home_page(page: ft.Page):
         height=40,
         border_radius=20,
         clip_behavior=ft.ClipBehavior.ANTI_ALIAS,
+        border=ft.border.all(2, Colors.GREY_LIGHT),
+        bgcolor=Colors.ACCENT,
+        alignment=ft.alignment.center,
         on_click=lambda e: page.go("/profile"),
         tooltip="Editar perfil",
     )
@@ -194,9 +193,27 @@ def create_home_page(page: ft.Page):
         bgcolor=Colors.BACKGROUND,
     )
 
+    # Compose with SafeArea: top for header/body, bottom for bottom nav
+    content = ft.Column([
+        ft.SafeArea(
+            content=ft.Column([
+                header,
+                body,
+            ], spacing=0, expand=True),
+            top=True,
+            bottom=False,
+            expand=True,
+        ),
+        ft.SafeArea(
+            content=_bottom_nav(page),
+            top=False,
+            bottom=True,
+        ),
+    ], spacing=0, expand=True)
+
     return ft.View(
         "/",
-        [header, body, _bottom_nav(page)],
+        [content],
         padding=ft.padding.all(0),
         bgcolor=Colors.BACKGROUND,
     )

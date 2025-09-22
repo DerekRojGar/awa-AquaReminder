@@ -55,21 +55,22 @@ def _bottom_nav(page: ft.Page):
 def create_settings_page(page: ft.Page) -> ft.View:
     def reset_app(e):
         def confirm_reset(e):
+            close_dialog()
             success = reset_app_data()
             if success:
                 page.snack_bar = ft.SnackBar(
-                    ft.Text("Datos eliminados. La aplicación se cerrará."),
+                    ft.Text("Datos eliminados. Reinicia la aplicación."),
                     bgcolor=Colors.SUCCESS
                 )
                 page.snack_bar.open = True
                 page.update()
-                # Cerrar la aplicación después de un breve delay
+                # En Android, redirigir al onboarding en lugar de cerrar
                 import time
                 import threading
-                def close_app():
-                    time.sleep(1.5)
-                    page.window_close()
-                threading.Thread(target=close_app, daemon=True).start()
+                def redirect_to_onboarding():
+                    time.sleep(2)
+                    page.go("/onboarding")
+                threading.Thread(target=redirect_to_onboarding, daemon=True).start()
             else:
                 page.snack_bar = ft.SnackBar(ft.Text("Error al eliminar datos"), bgcolor=Colors.ERROR)
                 page.snack_bar.open = True
@@ -150,9 +151,26 @@ def create_settings_page(page: ft.Page) -> ft.View:
         expand=True,
     )
 
+    content = ft.Column([
+        ft.SafeArea(
+            content=ft.Column([
+                header,
+                body,
+            ], spacing=0, expand=True),
+            top=True,
+            bottom=False,
+            expand=True,
+        ),
+        ft.SafeArea(
+            content=_bottom_nav(page),
+            top=False,
+            bottom=True,
+        ),
+    ], spacing=0, expand=True)
+
     return ft.View(
         "/settings",
-        [header, body, _bottom_nav(page)],
+        [content],
         padding=ft.padding.all(0),
         bgcolor=Colors.BACKGROUND,
     )

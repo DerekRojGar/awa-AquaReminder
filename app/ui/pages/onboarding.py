@@ -165,8 +165,14 @@ def create_onboarding_page(page: ft.Page) -> ft.View:
         expand=True,
     )
 
+    content = ft.SafeArea(
+        content=ft.Column([main_content], expand=True, spacing=0),
+        top=True,
+        bottom=True,
+    )
+
     # Asegurar que la View use ruta con el índice humano (1..3)
-    return ft.View(f"/onboarding/{idx + 1}", [main_content], bgcolor=Colors.BACKGROUND, padding=ft.padding.all(0))
+    return ft.View(f"/onboarding/{idx + 1}", [content], bgcolor=Colors.BACKGROUND, padding=ft.padding.all(0))
 
 
 def is_onboarding_completed() -> bool:

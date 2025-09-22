@@ -84,26 +84,31 @@ def _build_profile_page(page: ft.Page, *, view_route: str, header_title: str, he
         value=str(existing.get("daily_goal_ml", "")),
     )
 
-    # Avatares por imagen con rutas absolutas
-    import os
-    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
-    avatares_dir = os.path.join(project_root, "src", "assets", "avatares")
-    
+    # Rutas relativas dentro de assets/ para el APK
     avatar_files = [
-        os.path.join(avatares_dir, "Avatar1.jpg"),
-        os.path.join(avatares_dir, "Avatar2.jpg"),
-        os.path.join(avatares_dir, "Avatar3.jpg"),
-        os.path.join(avatares_dir, "Avatar4.jpg"),
+        "avatares/Avatar1.jpg",
+        "avatares/Avatar2.jpg",
+        "avatares/Avatar3.jpg",
+        "avatares/Avatar4.jpg",
     ]
+    avatar_icons = [ft.Icons.PERSON, ft.Icons.FACE, ft.Icons.ACCOUNT_CIRCLE, ft.Icons.SUPERVISED_USER_CIRCLE]
+    
     sel = {"index": int(existing.get("avatar_id", 0)) if str(existing.get("avatar_id", "")).isdigit() else 0}
 
     # Preview circular más grande
     def avatar_preview_control():
         src = avatar_files[sel["index"] % len(avatar_files)]
+        fallback_icon = avatar_icons[sel["index"] % len(avatar_icons)]
         return ft.Container(
             width=80,
             height=80,
-            content=ft.Image(src, fit=ft.ImageFit.COVER, width=80, height=80),
+            content=ft.Image(
+                src=src, 
+                fit=ft.ImageFit.COVER, 
+                width=80, 
+                height=80,
+                error_content=ft.Icon(fallback_icon, size=40, color=Colors.PRIMARY)
+            ),
             bgcolor=Colors.ACCENT,
             alignment=ft.alignment.center,
             border=ft.border.all(2, Colors.GREY_LIGHT),
@@ -116,11 +121,18 @@ def _build_profile_page(page: ft.Page, *, view_route: str, header_title: str, he
     # Miniaturas circulares más grandes
     def make_avatar_chip(i: int):
         src = avatar_files[i]
+        fallback_icon = avatar_icons[i % len(avatar_icons)]
         selected = sel["index"] == i
         return ft.Container(
             width=64,
             height=64,
-            content=ft.Image(src, fit=ft.ImageFit.COVER, width=64, height=64),
+            content=ft.Image(
+                src=src, 
+                fit=ft.ImageFit.COVER, 
+                width=64, 
+                height=64,
+                error_content=ft.Icon(fallback_icon, size=30, color=Colors.PRIMARY)
+            ),
             bgcolor=Colors.ACCENT,
             border=ft.border.all(4, Colors.PRIMARY) if selected else ft.border.all(2, Colors.GREY_LIGHT),
             border_radius=32,
@@ -137,7 +149,14 @@ def _build_profile_page(page: ft.Page, *, view_route: str, header_title: str, he
     def select_avatar(i: int):
         sel["index"] = i
         new_src = avatar_files[i]
-        avatar_preview.content = ft.Image(new_src, fit=ft.ImageFit.COVER, width=80, height=80)
+        fallback_icon = avatar_icons[i % len(avatar_icons)]
+        avatar_preview.content = ft.Image(
+            src=new_src, 
+            fit=ft.ImageFit.COVER, 
+            width=80, 
+            height=80,
+            error_content=ft.Icon(fallback_icon, size=40, color=Colors.PRIMARY)
+        )
         refresh_avatar_row()
         page.update()
 
@@ -302,12 +321,31 @@ def _build_profile_page(page: ft.Page, *, view_route: str, header_title: str, he
     )
 
     controls = [header, body]
-    # Agregar bottom nav sólo en la vista de perfil (no en setup inicial)
-    if view_route == "/profile":
-        controls.append(_bottom_nav(page))
+    has_bottom_nav = view_route == "/profile"
+
+    # Respect safe areas: top for content, bottom for nav if present
+    if has_bottom_nav:
+        content = ft.Column([
+            ft.SafeArea(
+                content=ft.Column([header, body], spacing=0, expand=True),
+                top=True,
+                bottom=False,
+            ),
+            ft.SafeArea(
+                content=_bottom_nav(page),
+                top=False,
+                bottom=True,
+            ),
+        ], spacing=0, expand=True)
+    else:
+        content = ft.SafeArea(
+            content=ft.Column([header, body], spacing=0, expand=True),
+            top=True,
+            bottom=True,
+        )
 
     update_preview()
-    return ft.View(view_route, controls, padding=ft.padding.all(0), bgcolor=Colors.BACKGROUND)
+    return ft.View(view_route, [content], padding=ft.padding.all(0), bgcolor=Colors.BACKGROUND)
 
 
 def create_profile_setup_page(page: ft.Page) -> ft.View:

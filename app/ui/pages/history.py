@@ -172,9 +172,26 @@ def create_history_page(page: ft.Page) -> ft.View:
         expand=True,
     )
 
+    content = ft.Column([
+        ft.SafeArea(
+            content=ft.Column([
+                header,
+                body,
+            ], spacing=0, expand=True),
+            top=True,
+            bottom=False,
+            expand=True,
+        ),
+        ft.SafeArea(
+            content=_bottom_nav(page),
+            top=False,
+            bottom=True,
+        ),
+    ], spacing=0, expand=True)
+
     return ft.View(
         "/history",
-        [header, body, _bottom_nav(page)],
+        [content],
         padding=ft.padding.all(0),
         bgcolor=Colors.BACKGROUND,
     )

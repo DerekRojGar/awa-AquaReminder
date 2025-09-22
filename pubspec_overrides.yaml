@@ -1,0 +1,5 @@
+dependency_overrides:
+  webview_flutter_android: ^3.16.7
+  wakelock_plus: ^1.2.10
+  web: ^1.0.0
+  window_manager: ^0.4.3

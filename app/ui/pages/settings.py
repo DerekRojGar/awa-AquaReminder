@@ -1,6 +1,7 @@
 import flet as ft
 from config import Colors, Design
 from services.profile_service import reset_app_data
+from services.theme_service import load_theme_preference, save_theme_preference
 
 
 def _current_tab_index(route: str) -> int:
@@ -95,6 +96,31 @@ def create_settings_page(page: ft.Page) -> ft.View:
         dlg.open = True
         page.update()
 
+    def toggle_dark_mode(e):
+        # Alternar tema
+        current_dark = load_theme_preference()
+        new_dark = not current_dark
+        save_theme_preference(new_dark)
+        
+        # Aplicar tema inmediatamente
+        Colors.set_dark_mode(new_dark)
+        page.theme_mode = ft.ThemeMode.DARK if new_dark else ft.ThemeMode.LIGHT
+        
+        # Mostrar feedback
+        theme_name = "oscuro" if new_dark else "claro"
+        page.snack_bar = ft.SnackBar(
+            ft.Text(f"Tema {theme_name} activado"),
+            bgcolor=Colors.SUCCESS
+        )
+        page.snack_bar.open = True
+        
+        # Recargar página para aplicar colores
+        page.go(page.route)
+        page.update()
+
+    # Estado actual del tema
+    is_dark = load_theme_preference()
+
     # Header
     header = ft.Container(
         content=ft.Column([
@@ -119,6 +145,26 @@ def create_settings_page(page: ft.Page) -> ft.View:
             ]),
             padding=ft.padding.all(16),
             on_click=lambda e: page.go("/profile"),
+        ),
+        
+        ft.Divider(height=1, color=Colors.GREY_LIGHT),
+        
+        ft.Container(
+            content=ft.Row([
+                ft.Icon(ft.Icons.DARK_MODE if not is_dark else ft.Icons.LIGHT_MODE, color=Colors.PRIMARY),
+                ft.Column([
+                    ft.Text("Modo oscuro" if not is_dark else "Modo claro", size=16, color=Colors.TEXT_PRIMARY),
+                    ft.Text("Cambiar a tema oscuro" if not is_dark else "Cambiar a tema claro", size=12, color=Colors.TEXT_SECONDARY),
+                ], spacing=2),
+                ft.Container(expand=True),
+                ft.Switch(
+                    value=is_dark,
+                    on_change=toggle_dark_mode,
+                    active_color=Colors.PRIMARY,
+                ),
+            ]),
+            padding=ft.padding.all(16),
+            on_click=toggle_dark_mode,
         ),
         
         ft.Divider(height=1, color=Colors.GREY_LIGHT),

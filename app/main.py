@@ -7,6 +7,8 @@ from ui.pages.profile_setup import create_profile_setup_page, create_profile_pag
 from ui.pages.history import create_history_page
 from ui.pages.settings import create_settings_page
 from services.profile_service import has_profile_data
+from services.theme_service import load_theme_preference
+from config import Colors
 
 
 def _profile_file_path() -> str:
@@ -20,9 +22,13 @@ def _profile_file_path() -> str:
 
 
 def main(page: ft.Page):
+    # Cargar y aplicar tema
+    dark_mode = load_theme_preference()
+    Colors.set_dark_mode(dark_mode)
+    
     # Configuración inicial de la página
     page.title = "awa - AquaReminder"
-    page.theme_mode = ft.ThemeMode.LIGHT
+    page.theme_mode = ft.ThemeMode.DARK if dark_mode else ft.ThemeMode.LIGHT
     page.padding = 0
     # Evitar forzar tamaño de ventana en Android; solo útil en desktop
     try:

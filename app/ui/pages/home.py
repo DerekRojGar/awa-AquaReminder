@@ -95,9 +95,19 @@ def create_home_page(page: ft.Page):
         "avatares/Avatar3.jpg",
         "avatares/Avatar4.jpg",
     ]
+    avatar_icons = [ft.Icons.PERSON, ft.Icons.FACE, ft.Icons.ACCOUNT_CIRCLE, ft.Icons.SUPERVISED_USER_CIRCLE]
+    
     src = avatar_files[avatar_id % len(avatar_files)]
+    fallback_icon = avatar_icons[avatar_id % len(avatar_icons)]
+    
     avatar = ft.Container(
-        content=ft.Image(src, fit=ft.ImageFit.COVER, width=40, height=40),
+        content=ft.Image(
+            src, 
+            fit=ft.ImageFit.COVER, 
+            width=40, 
+            height=40,
+            error_content=ft.Icon(fallback_icon, size=24, color=Colors.PRIMARY)
+        ),
         width=40,
         height=40,
         border_radius=20,

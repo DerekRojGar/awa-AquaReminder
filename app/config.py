@@ -1,31 +1,75 @@
 # Configuración de la aplicación awa (AquaReminder)
 
 # Paleta de colores moderna
-class Colors:
-    # Colores principales (azules/turquesa)
+class ColorsTheme:
+    def __init__(self):
+        self._dark_mode = False
+    
+    def set_dark_mode(self, enabled: bool):
+        self._dark_mode = enabled
+    
+    def is_dark_mode(self) -> bool:
+        return self._dark_mode
+    
+    # Colores principales (azules/turquesa) - Light Mode
     PRIMARY = "#04a4b4"           # Azul principal
     PRIMARY_DARK = "#045273"      # Azul oscuro
     PRIMARY_LIGHT = "#19bcc3"     # Turquesa claro
     SECONDARY = "#96bcc1"         # Azul secundario
-    ACCENT = "#fbfaec"            # Crema/beige claro
-    BACKGROUND = "#f8f9fa"        # Fondo principal
     
-    # Colores secundarios (grises/neutros)
-    GREY_LIGHT = "#cbe0dc"        # Gris verdoso claro
-    GREY_MEDIUM = "#96bcc1"       # Gris azulado medio
-    GREY_DARK = "#c4d0cc"         # Gris verdoso
-    GREY_BLUE = "#c4c4cc"         # Gris azulado
-    GREY_SAGE = "#7ca4a4"         # Gris salvia
-
-    # Colores de texto
-    TEXT_PRIMARY = "#2c3e50"      # Texto principal oscuro
-    TEXT_SECONDARY = "#7f8c8d"    # Texto secundario
-    TEXT_LIGHT = "#ffffff"        # Texto claro
+    # Colores principales - Dark Mode
+    PRIMARY_DARK_MODE = "#19bcc3"      # Turquesa claro (más visible en oscuro)
+    PRIMARY_DARK_DARK_MODE = "#04a4b4" # Azul principal
+    SECONDARY_DARK_MODE = "#7ca4a4"    # Gris salvia
     
-    # Colores de estado
+    # Colores de estado (iguales en ambos modos)
     SUCCESS = "#27ae60"           # Verde éxito
     WARNING = "#f39c12"           # Naranja advertencia
     ERROR = "#e74c3c"             # Rojo error
+    
+    # Propiedades dinámicas basadas en el modo
+    @property
+    def ACCENT(self) -> str:
+        return "#2c2c2e" if self._dark_mode else "#fbfaec"
+    
+    @property
+    def BACKGROUND(self) -> str:
+        return "#1c1c1e" if self._dark_mode else "#f8f9fa"
+    
+    @property
+    def GREY_LIGHT(self) -> str:
+        return "#3a3a3c" if self._dark_mode else "#cbe0dc"
+    
+    @property
+    def GREY_MEDIUM(self) -> str:
+        return "#48484a" if self._dark_mode else "#96bcc1"
+    
+    @property
+    def GREY_DARK(self) -> str:
+        return "#636366" if self._dark_mode else "#c4d0cc"
+    
+    @property
+    def GREY_BLUE(self) -> str:
+        return "#636366" if self._dark_mode else "#c4c4cc"
+    
+    @property
+    def GREY_SAGE(self) -> str:
+        return "#8e8e93" if self._dark_mode else "#7ca4a4"
+    
+    @property
+    def TEXT_PRIMARY(self) -> str:
+        return "#ffffff" if self._dark_mode else "#2c3e50"
+    
+    @property
+    def TEXT_SECONDARY(self) -> str:
+        return "#8e8e93" if self._dark_mode else "#7f8c8d"
+    
+    @property
+    def TEXT_LIGHT(self) -> str:
+        return "#ffffff" if self._dark_mode else "#ffffff"
+
+# Instancia singleton global
+Colors = ColorsTheme()
 
 # Configuración de diseño
 class Design:

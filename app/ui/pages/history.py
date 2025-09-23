@@ -3,6 +3,8 @@ from datetime import datetime, date, timedelta
 from config import Colors, Design
 from services.intake_service import get_recent, get_daily_totals, delete_last_intake
 
+ft.with_opacity = Colors.with_opacity
+
 
 def _current_tab_index(route: str) -> int:
     if route in ("/", ""):
@@ -17,18 +19,32 @@ def _current_tab_index(route: str) -> int:
 
 
 def _nav_item(label: str, icon, active: bool, on_click):
-    color = Colors.PRIMARY if active else Colors.GREY_SAGE
-    text_color = Colors.TEXT_PRIMARY if active else Colors.GREY_SAGE
     return ft.Container(
         content=ft.Column(
             [
-                ft.Icon(icon, size=24, color=color),
-                ft.Text(label, size=12, color=text_color),
+                ft.Container(
+                    content=ft.Icon(
+                        icon, 
+                        size=Design.ICON_SIZE_LG, 
+                        color=Colors.TEXT_LIGHT if active else Colors.TEXT_SECONDARY
+                    ),
+                    width=40,
+                    height=40,
+                    bgcolor=Colors.PRIMARY if active else Colors.SURFACE,
+                    border_radius=Design.BORDER_RADIUS_SM,
+                    alignment=ft.alignment.center,
+                ),
+                ft.Text(
+                    label, 
+                    size=Design.FONT_SIZE_CAPTION, 
+                    color=Colors.TEXT_PRIMARY if active else Colors.TEXT_SECONDARY,
+                    weight=Colors.get_font_weight("MEDIUM") if active else ft.FontWeight.NORMAL,
+                ),
             ],
-            spacing=4,
+            spacing=Design.SPACE_XXXS,
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
         ),
-        padding=ft.padding.symmetric(vertical=12, horizontal=8),
+        padding=ft.padding.symmetric(vertical=Design.SPACE_XS, horizontal=Design.SPACE_XXS),
         on_click=on_click,
         expand=True,
     )
@@ -39,17 +55,23 @@ def _bottom_nav(page: ft.Page):
     return ft.Container(
         content=ft.Row(
             [
-                _nav_item("Inicio", ft.Icons.HOME, idx == 0, lambda e: page.go("/")),
-                _nav_item("Historial", ft.Icons.HISTORY, idx == 1, lambda e: page.go("/history")),
-                _nav_item("Perfil", ft.Icons.PERSON, idx == 2, lambda e: page.go("/profile")),
-                _nav_item("Ajustes", ft.Icons.SETTINGS, idx == 3, lambda e: page.go("/settings")),
+                _nav_item("Inicio", ft.Icons.HOME_ROUNDED, idx == 0, lambda e: page.go("/")),
+                _nav_item("Historial", ft.Icons.ANALYTICS_ROUNDED, idx == 1, lambda e: page.go("/history")),
+                _nav_item("Perfil", ft.Icons.PERSON_ROUNDED, idx == 2, lambda e: page.go("/profile")),
+                _nav_item("Ajustes", ft.Icons.SETTINGS_ROUNDED, idx == 3, lambda e: page.go("/settings")),
             ],
             alignment=ft.MainAxisAlignment.SPACE_EVENLY,
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
         ),
-        bgcolor=Colors.ACCENT,
-        padding=ft.padding.only(left=16, right=16, top=6, bottom=6),
-        border=ft.border.only(top=ft.border.BorderSide(1, Colors.GREY_LIGHT)),
+        bgcolor=Colors.CARD_BACKGROUND,
+        padding=ft.padding.only(left=Design.SPACE_SM, right=Design.SPACE_SM, top=Design.SPACE_XS, bottom=Design.SPACE_XS),
+        border=ft.border.only(top=ft.border.BorderSide(1, Colors.BORDER)),
+        shadow=ft.BoxShadow(
+            spread_radius=0,
+            blur_radius=20,
+            color=ft.with_opacity(0.1, Colors.DARK_NAVY),
+            offset=ft.Offset(0, -4),
+        ),
     )
 
 
@@ -129,7 +151,7 @@ def _build_list_view(filter_key: str) -> ft.Control:
             ft.Container(
                 content=ft.Row(
                     [
-                        ft.Text(dt.strftime("%H:%M"), size=14, color=Colors.GREY_SAGE),
+                        ft.Text(dt.strftime("%H:%M"), size=14, color=Colors.GREY_DARK),
                         ft.Container(expand=True),
                         ft.Text(f"{amount} ml", size=16, weight=ft.FontWeight.BOLD, color=Colors.TEXT_PRIMARY),
                     ],
@@ -150,7 +172,7 @@ def _build_list_view(filter_key: str) -> ft.Control:
 def create_history_page(page: ft.Page) -> ft.View:
     current_filter = {"value": "today"}
 
-    content_column = ft.Column(spacing=12, expand=True)
+    content_column = ft.Column(spacing=12, expand=True, scroll=ft.ScrollMode.AUTO)
 
     def refresh(filter_key: str, undo: bool = False):
         if undo:

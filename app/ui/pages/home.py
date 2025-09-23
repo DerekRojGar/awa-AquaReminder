@@ -78,189 +78,254 @@ def _bottom_nav(page: ft.Page):
     )
 
 
-def _drink_icon_button(icon, label: str, amount_ml: int, page: ft.Page, goal_ml: int, total_text: ft.Text, progress_bar: ft.ProgressBar, progress_text: ft.Text):
+# Lista global para almacenar ingestas personalizadas
+custom_intakes = []
+
+def _add_intake_and_update(amount_ml: int, page: ft.Page, goal_ml: int, total_text: ft.Text, progress_bar: ft.ProgressBar, progress_text: ft.Text):
+    """Función auxiliar para agregar ingesta y actualizar UI"""
+    add_intake(amount_ml)
+    # Feedback visual mejorado
+    page.snack_bar = ft.SnackBar(
+        content=ft.Row([
+            ft.Icon(ft.Icons.CHECK_CIRCLE_ROUNDED, color=Colors.TEXT_LIGHT, size=Design.ICON_SIZE_MD),
+            ft.Text(f"+{amount_ml} ml registrados", color=Colors.TEXT_LIGHT, weight=Colors.get_font_weight("MEDIUM")),
+        ], spacing=Design.SPACE_XS),
+        bgcolor=Colors.SUCCESS,
+        shape=ft.RoundedRectangleBorder(radius=Design.BORDER_RADIUS_SM),
+    )
+    page.snack_bar.open = True
+    
+    # Actualizar total y progreso
+    total = get_today_total()
+    total_text.value = f"{total:,} ml"
+    ratio = min(total / max(goal_ml, 1), 1.0)
+    progress_bar.value = ratio
+    progress_bar.color = Colors.SUCCESS if ratio >= 1.0 else Colors.PRIMARY
+    progress_text.value = f"{total:,} / {goal_ml:,} ml"
+    page.update()
+
+def _drink_icon_button(icon, label: str, amount_ml: int, page: ft.Page, goal_ml: int, total_text: ft.Text, progress_bar: ft.ProgressBar, progress_text: ft.Text, color=None):
     def on_click(e):
-        add_intake(amount_ml)
-        # Feedback visual mejorado
-        page.snack_bar = ft.SnackBar(
-            content=ft.Row([
-                ft.Icon(ft.Icons.CHECK_CIRCLE_ROUNDED, color=Colors.TEXT_LIGHT, size=Design.ICON_SIZE_MD),
-                ft.Text(f"+{amount_ml} ml registrados", color=Colors.TEXT_LIGHT, weight=Colors.get_font_weight("MEDIUM")),
-            ], spacing=Design.SPACE_XS),
-            bgcolor=Colors.SUCCESS,
-            shape=ft.RoundedRectangleBorder(radius=Design.BORDER_RADIUS_SM),
-        )
-        page.snack_bar.open = True
-        
-        # Actualizar total y progreso
-        total = get_today_total()
-        total_text.value = f"{total:,} ml"
-        ratio = min(total / max(goal_ml, 1), 1.0)
-        progress_bar.value = ratio
-        progress_bar.color = Colors.SUCCESS if ratio >= 1.0 else Colors.PRIMARY
-        progress_text.value = f"{total:,} / {goal_ml:,} ml"
-        page.update()
+        _add_intake_and_update(amount_ml, page, goal_ml, total_text, progress_bar, progress_text)
+    
+    btn_color = color or Colors.PRIMARY
     
     return ft.Container(
         content=ft.Column([
             ft.Container(
                 content=ft.Icon(
                     icon,
-                    size=Design.ICON_SIZE_XXL,
+                    size=32,  # Tamaño más pequeño para móvil
                     color=Colors.TEXT_LIGHT,
                 ),
-                width=80,
-                height=80,
-                bgcolor=Colors.PRIMARY,
-                border_radius=Design.BORDER_RADIUS_XL,
+                width=60,  # Tamaño más compacto
+                height=60,
+                bgcolor=btn_color,
+                border_radius=Design.BORDER_RADIUS_LG,
                 alignment=ft.alignment.center,
                 shadow=ft.BoxShadow(
                     spread_radius=0,
-                    blur_radius=16,
-                    color=ft.with_opacity(0.25, Colors.PRIMARY),
-                    offset=ft.Offset(0, 4),
+                    blur_radius=8,
+                    color=ft.with_opacity(0.15, btn_color),
+                    offset=ft.Offset(0, 2),
                 ),
             ),
-            ft.Container(height=Design.SPACE_XS),
+            ft.Container(height=4),  # Espaciado reducido
             ft.Text(
                 label,
-                size=Design.FONT_SIZE_SMALL,
-                weight=Colors.get_font_weight("SEMIBOLD"),
+                size=Design.FONT_SIZE_CAPTION,  # Texto más pequeño
+                weight=Colors.get_font_weight("MEDIUM"),
                 color=Colors.TEXT_PRIMARY,
                 text_align=ft.TextAlign.CENTER,
+                max_lines=1,
+                overflow=ft.TextOverflow.ELLIPSIS,
             ),
             ft.Text(
                 f"{amount_ml} ml",
-                size=Design.FONT_SIZE_CAPTION,
+                size=10,  # Texto muy pequeño para cantidad
                 color=Colors.TEXT_SECONDARY,
                 text_align=ft.TextAlign.CENTER,
             ),
-        ], spacing=0, horizontal_alignment=ft.CrossAxisAlignment.CENTER),
+        ], spacing=2, horizontal_alignment=ft.CrossAxisAlignment.CENTER),
         on_click=on_click,
         ink=True,
-        border_radius=Design.BORDER_RADIUS_LG,
-        padding=ft.padding.all(Design.SPACE_SM),
-        expand=True,
+        border_radius=Design.BORDER_RADIUS_SM,
+        padding=ft.padding.all(8),  # Padding reducido
+        width=80,  # Ancho fijo para consistencia
     )
 
 
-def _custom_intake_button(page: ft.Page, goal_ml: int, total_text: ft.Text, progress_bar: ft.ProgressBar, progress_text: ft.Text):
-    custom_amount = ft.TextField(
+def _show_custom_intake_form(page: ft.Page, goal_ml: int, total_text: ft.Text, progress_bar: ft.ProgressBar, progress_text: ft.Text, custom_drinks_row: ft.Row):
+    """Muestra formulario simple para crear ingesta personalizada"""
+    
+    # Variables para el formulario
+    amount_input = ft.TextField(
         label="Cantidad (ml)",
-        hint_text="ej: 300",
-        width=120,
-        height=40,
-        border_radius=Design.BORDER_RADIUS_SM,
-        text_size=Design.FONT_SIZE_SMALL,
+        hint_text="Ej: 300",
         keyboard_type=ft.KeyboardType.NUMBER,
-        content_padding=ft.padding.symmetric(horizontal=Design.SPACE_SM, vertical=Design.SPACE_XS),
+        width=200,
+        value="300"
     )
     
-    custom_icon_selector = ft.Dropdown(
-        label="Icono",
-        width=120,
-        options=[
-            ft.dropdown.Option("local_cafe", "☕ Café"),
-            ft.dropdown.Option("local_bar", "🍺 Bebida"),
-            ft.dropdown.Option("sports_bar", "🥤 Refresco"),
-            ft.dropdown.Option("emoji_food_beverage", "🧃 Jugo"),
-            ft.dropdown.Option("water_drop", "💧 Agua"),
-            ft.dropdown.Option("local_drink", "🥛 Leche"),
-        ],
-        value="water_drop",
-        border_radius=Design.BORDER_RADIUS_SM,
-        text_size=Design.FONT_SIZE_SMALL,
-        content_padding=ft.padding.symmetric(horizontal=Design.SPACE_SM, vertical=Design.SPACE_XS),
-    )
+    # Iconos predefinidos simples
+    icon_options = [
+        ft.Icons.LOCAL_CAFE,
+        ft.Icons.WINE_BAR, 
+        ft.Icons.SPORTS_BAR,
+        ft.Icons.LOCAL_DRINK,
+        ft.Icons.COFFEE,
+        ft.Icons.EMOJI_FOOD_BEVERAGE,
+    ]
     
-    def add_custom_intake(e):
+    # Variable para el índice del icono seleccionado
+    selected_icon_index = [0]  # Usar lista para permitir modificación
+    
+    def create_icon_button(icon, index):
+        def on_select(e):
+            selected_icon_index[0] = index  # Modificar el valor en la lista
+            # Actualizar visual de selección
+            for i, btn in enumerate(icon_row.controls):
+                btn.bgcolor = Colors.PRIMARY if i == index else Colors.SURFACE
+                btn.border = ft.border.all(2, Colors.PRIMARY) if i == index else ft.border.all(1, Colors.BORDER)
+            page.update()
+        
+        return ft.Container(
+            content=ft.Icon(icon, size=24, color=Colors.TEXT_PRIMARY),
+            width=50,
+            height=50,
+            bgcolor=Colors.PRIMARY if index == 0 else Colors.SURFACE,
+            border=ft.border.all(2, Colors.PRIMARY) if index == 0 else ft.border.all(1, Colors.BORDER),
+            border_radius=Design.BORDER_RADIUS_SM,
+            alignment=ft.alignment.center,
+            on_click=on_select,
+            ink=True,
+        )
+    
+    icon_row = ft.Row([
+        create_icon_button(icon, i) for i, icon in enumerate(icon_options)
+    ], spacing=8, wrap=True)
+    
+    def add_custom_drink(e):
         try:
-            amount = int(custom_amount.value or 0)
-            if amount > 0:
-                add_intake(amount)
+            amount = int(amount_input.value or 0)
+            if amount <= 0:
+                return
                 
-                # Feedback visual
-                icon_map = {
-                    "local_cafe": ft.Icons.LOCAL_CAFE,
-                    "local_bar": ft.Icons.LOCAL_BAR,
-                    "sports_bar": ft.Icons.SPORTS_BAR,
-                    "emoji_food_beverage": ft.Icons.EMOJI_FOOD_BEVERAGE,
-                    "water_drop": ft.Icons.WATER_DROP,
-                    "local_drink": ft.Icons.LOCAL_DRINK,
-                }
-                selected_icon = icon_map.get(custom_icon_selector.value, ft.Icons.WATER_DROP)
-                
-                page.snack_bar = ft.SnackBar(
-                    content=ft.Row([
-                        ft.Icon(selected_icon, color=Colors.TEXT_LIGHT, size=Design.ICON_SIZE_MD),
-                        ft.Text(f"+{amount} ml registrados", color=Colors.TEXT_LIGHT, weight=Colors.get_font_weight("MEDIUM")),
-                    ], spacing=Design.SPACE_XS),
-                    bgcolor=Colors.SUCCESS,
-                    shape=ft.RoundedRectangleBorder(radius=Design.BORDER_RADIUS_SM),
-                )
-                page.snack_bar.open = True
-                
-                # Actualizar total y progreso
-                total = get_today_total()
-                total_text.value = f"{total:,} ml"
-                ratio = min(total / max(goal_ml, 1), 1.0)
-                progress_bar.value = ratio
-                progress_bar.color = Colors.SUCCESS if ratio >= 1.0 else Colors.PRIMARY
-                progress_text.value = f"{total:,} / {goal_ml:,} ml"
-                
-                # Limpiar campos
-                custom_amount.value = ""
-                page.update()
-            else:
-                page.snack_bar = ft.SnackBar(
-                    content=ft.Text("Ingresa una cantidad válida", color=Colors.TEXT_LIGHT),
-                    bgcolor=Colors.ERROR,
-                )
-                page.snack_bar.open = True
-                page.update()
+            # Agregar la ingesta
+            _add_intake_and_update(amount, page, goal_ml, total_text, progress_bar, progress_text)
+            
+            # Crear botón personalizado
+            selected_icon = icon_options[selected_icon_index[0]]  # Usar el valor de la lista
+            
+            custom_button = _drink_icon_button(
+                selected_icon,
+                f"{amount}ml",
+                amount,
+                page,
+                goal_ml,
+                total_text,
+                progress_bar,
+                progress_text,
+                color=Colors.PRIMARY_LIGHT
+            )
+            
+            # Agregar a la fila de bebidas personalizadas
+            custom_drinks_row.controls.append(custom_button)
+            
+            # Limpiar formulario
+            amount_input.value = "300"
+            selected_icon_index[0] = 0  # Reiniciar selección usando la lista
+            
+            # Ocultar formulario
+            form_container.visible = False
+            add_button_container.visible = True
+            
+            page.update()
+            
         except ValueError:
+            # Error de conversión - mostrar mensaje
             page.snack_bar = ft.SnackBar(
-                content=ft.Text("Ingresa solo números", color=Colors.TEXT_LIGHT),
+                content=ft.Text("Por favor ingresa un número válido", color=Colors.TEXT_LIGHT),
                 bgcolor=Colors.ERROR,
             )
             page.snack_bar.open = True
             page.update()
     
+    def cancel_form(e):
+        form_container.visible = False
+        add_button_container.visible = True
+        page.update()
+    
+    def show_form(e):
+        form_container.visible = True
+        add_button_container.visible = False
+        page.update()
+    
+    # Contenedor del formulario (inicialmente oculto)
+    form_container = ft.Container(
+        content=ft.Card(
+            content=ft.Container(
+                content=ft.Column([
+                    ft.Text("Nueva ingesta personalizada", size=Design.FONT_SIZE_NORMAL, weight=Colors.get_font_weight("SEMIBOLD")),
+                    ft.Container(height=Design.SPACE_SM),
+                    amount_input,
+                    ft.Container(height=Design.SPACE_SM),
+                    ft.Text("Selecciona un icono:", size=Design.FONT_SIZE_SMALL),
+                    icon_row,
+                    ft.Container(height=Design.SPACE_SM),
+                    ft.Row([
+                        ft.ElevatedButton("Cancelar", on_click=cancel_form, bgcolor=Colors.SURFACE, color=Colors.TEXT_PRIMARY),
+                        ft.ElevatedButton("Agregar", on_click=add_custom_drink, bgcolor=Colors.PRIMARY, color=Colors.TEXT_LIGHT),
+                    ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                ], spacing=Design.SPACE_XS),
+                padding=ft.padding.all(Design.SPACE_MD),
+            ),
+            elevation=8,
+        ),
+        visible=False,
+        margin=ft.margin.symmetric(horizontal=Design.SPACE_SM),
+    )
+    
+    # Botón de agregar (inicialmente visible)
+    add_button_container = ft.Container(
+        content=_add_custom_button_direct(show_form),
+        visible=True,
+    )
+    
+    return form_container, add_button_container
+
+def _add_custom_button_direct(on_click_handler):
+    """Botón simple para mostrar formulario"""
     return ft.Container(
         content=ft.Column([
-            ft.Text(
-                "Personalizado",
-                size=Design.FONT_SIZE_NORMAL,
-                weight=Colors.get_font_weight("SEMIBOLD"),
-                color=Colors.TEXT_PRIMARY,
-                text_align=ft.TextAlign.CENTER,
-            ),
-            ft.Container(height=Design.SPACE_XS),
-            custom_amount,
-            ft.Container(height=Design.SPACE_XS),
-            custom_icon_selector,
-            ft.Container(height=Design.SPACE_SM),
             ft.Container(
-                content=ft.Text(
-                    "Agregar",
-                    size=Design.FONT_SIZE_SMALL,
-                    weight=Colors.get_font_weight("SEMIBOLD"),
-                    color=Colors.TEXT_LIGHT,
-                    text_align=ft.TextAlign.CENTER,
+                content=ft.Icon(
+                    ft.Icons.ADD_CIRCLE_OUTLINE,
+                    size=32,
+                    color=Colors.TEXT_SECONDARY,
                 ),
-                bgcolor=Colors.PRIMARY,
-                padding=ft.padding.symmetric(vertical=Design.SPACE_XS, horizontal=Design.SPACE_SM),
-                border_radius=Design.BORDER_RADIUS_SM,
-                on_click=add_custom_intake,
-                ink=True,
-                width=120,
+                width=60,
+                height=60,
+                bgcolor=Colors.SURFACE,
+                border=ft.border.all(1, Colors.BORDER),
+                border_radius=Design.BORDER_RADIUS_LG,
                 alignment=ft.alignment.center,
             ),
-        ], spacing=0, horizontal_alignment=ft.CrossAxisAlignment.CENTER),
-        padding=ft.padding.all(Design.SPACE_MD),
-        bgcolor=Colors.CARD_BACKGROUND,
-        border_radius=Design.BORDER_RADIUS_LG,
-        border=ft.border.all(1, Colors.BORDER),
+            ft.Container(height=4),
+            ft.Text(
+                "Agregar",
+                size=Design.FONT_SIZE_CAPTION,
+                color=Colors.TEXT_SECONDARY,
+                weight=Colors.get_font_weight("MEDIUM"),
+                text_align=ft.TextAlign.CENTER,
+                max_lines=1,
+            ),
+        ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=2),
+        on_click=on_click_handler,
+        border_radius=Design.BORDER_RADIUS_SM,
+        padding=ft.padding.all(8),
+        ink=True,
+        width=80,
     )
 
 
@@ -442,7 +507,13 @@ def create_home_page(page: ft.Page):
         ),
     )
 
-    # Acciones rápidas con iconos modernos
+    # Fila para bebidas personalizadas (se llenará dinámicamente) - Responsive
+    custom_drinks_row = ft.Row([], alignment=ft.MainAxisAlignment.START, spacing=8, wrap=True)
+    
+    # Crear formulario de ingesta personalizada
+    form_container, add_button_container = _show_custom_intake_form(page, goal_ml, total_text, progress_bar_functional, progress_text, custom_drinks_row)
+    
+    # Acciones rápidas con iconos modernos y mejorados
     quick_actions = ft.Column([
         ft.Text(
             "Registrar consumo", 
@@ -451,15 +522,21 @@ def create_home_page(page: ft.Page):
             weight=Colors.get_font_weight("SEMIBOLD"),
         ),
         ft.Container(height=Design.SPACE_SM),
+        # Bebidas predefinidas con mejores iconos - Layout responsive
         ft.Row([
-            _drink_icon_button(ft.Icons.LOCAL_CAFE, "Vaso", 250, page, goal_ml, total_text, progress_bar_functional, progress_text),
-            ft.Container(width=Design.SPACE_SM),
-            _drink_icon_button(ft.Icons.SPORTS_BAR, "Botella", 500, page, goal_ml, total_text, progress_bar_functional, progress_text),
-            ft.Container(width=Design.SPACE_SM),
+            _drink_icon_button(ft.Icons.WINE_BAR, "Vaso", 250, page, goal_ml, total_text, progress_bar_functional, progress_text),
+            _drink_icon_button(ft.Icons.LOCAL_DRINK, "Botella", 500, page, goal_ml, total_text, progress_bar_functional, progress_text),
             _drink_icon_button(ft.Icons.COFFEE, "Termo", 750, page, goal_ml, total_text, progress_bar_functional, progress_text),
-        ], alignment=ft.MainAxisAlignment.SPACE_EVENLY),
-        ft.Container(height=Design.SPACE_LG),
-        _custom_intake_button(page, goal_ml, total_text, progress_bar_functional, progress_text),
+            add_button_container,  # Usar el contenedor del botón de agregar
+        ], alignment=ft.MainAxisAlignment.SPACE_EVENLY, spacing=8),
+        ft.Container(height=Design.SPACE_SM),
+        # Formulario para agregar ingestas personalizadas
+        form_container,
+        # Fila de bebidas personalizadas (inicialmente vacía)
+        ft.Container(
+            content=custom_drinks_row,
+            visible=True,  # Siempre visible, se llena dinámicamente
+        ),
     ])
 
     # Tarjeta de sugerencias moderna

@@ -8,195 +8,396 @@ Aplicación móvil desarrollada con **Flet (Python + Flutter)** para ayudar al u
 
 ## Tabla de contenidos
 
-1. [Objetivo y alcance](#objetivo-y-alcance)  
-2. [Visión general de la arquitectura](#visión-general-de-la-arquitectura)  
-3. [Estructura de carpetas](#estructura-de-carpetas)  
-4. [Patrones de UI: páginas en Flet (sin UserControl)](#patrones-de-ui-páginas-en-flet-sin-usercontrol)  
-5. [Estado y flujo entre páginas](#estado-y-flujo-entre-páginas)  
-6. [Servicios y separación de responsabilidades](#servicios-y-separación-de-responsabilidades)  
-7. [Notificaciones locales: estrategia y limitaciones](#notificaciones-locales-estrategia-y-limitaciones)  
-8. [Flujo de desarrollo y checklist de validación](#flujo-de-desarrollo-y-checklist-de-validación)  
-9. [Convenciones y buenas prácticas](#convenciones-y-buenas-prácticas)  
-10. [Futuro / features fase 2](#futuro--features-fase-2)  
-11. [Referencias clave](#referencias-clave)  
+1. [Objetivo y alcance](#objetivo-y-alcance)
+2. [Instalación y configuración](#instalación-y-configuración)
+3. [Versiones y compatibilidad](#versiones-y-compatibilidad)
+4. [Configuración importante para compilación](#configuración-importante-para-compilación)
+5. [Estructura del proyecto](#estructura-del-proyecto)
+6. [Arquitectura de la aplicación](#arquitectura-de-la-aplicación)
+7. [Patrones de UI](#patrones-de-ui)
+8. [Compilación para Android](#compilación-para-android)
+9. [Funcionalidades implementadas](#funcionalidades-implementadas)
+10. [Solución de problemas](#solución-de-problemas)
+11. [Desarrollo futuro](#desarrollo-futuro)
 
 ---
 
 ## Objetivo y alcance
 
-- Desarrollar un MVP para **Android**, gestionado por una sola persona (sin cuentas de usuario, independiente por dispositivo).  
+- Desarrollar un MVP para **Android**, gestionado por una sola persona (sin cuentas de usuario, independiente por dispositivo)
 - Funciones principales:
-  1. Registrar ingestas de agua de forma rápida (botones + entrada personalizada).  
-  2. Ver métricas: total diario, promedio semanal, streaks, gráficas.  
-  3. Perfil con peso, altura, cálculo de IMC.  
-  4. Recordatorios locales confiables, incluso cuando la app esté cerrada.  
-- UX minimalista y directa: pocas pantallas, pocos botones, interfaz clara.
+  1. **Registro rápido de agua**: Botones con iconos visuales (vaso, botella, termo) + ingestas personalizadas
+  2. **Métricas avanzadas**: Total diario, promedio semanal, streaks, gráficas de progreso
+  3. **Perfil personalizado**: Peso, altura, cálculo automático de IMC
+  4. **Recordatorios inteligentes**: Notificaciones locales confiables incluso con la app cerrada
+- **UX moderna y minimalista**: Diseño con paleta de colores moderna, interfaz responsive para móviles
 
 ---
 
-## Visión general de la arquitectura
+## Instalación y configuración
 
-Arquitectura en capas, simple y mantenible:
+### Prerrequisitos
 
-- **UI**  
-  Páginas (Views) construidas como funciones y retornadas directamente; navegación por rutas (`page.go()`), sin `UserControl` ni carpeta de componentes.
+- **Python 3.9+** instalado en el sistema
+- **Git** para clonar el repositorio
+- **Android Studio** (opcional, pero recomendado para emuladores y debugging)
 
-- **Estado de UI**  
-  Estado mínimo, local por página o por módulo (por ejemplo, onboarding por rutas `/onboarding/1..3`)
+### Paso 1: Clonar el repositorio
 
-- **Servicios (business logic)**  
-  Lógica de métricas, persistencia (base de datos local), recordatorios, notificaciones.
-
-- **Modelos de datos**  
-  Estructuras que representan ingesta, usuario, configuraciones, etc.
-
-- **Parte nativa / extensiones**  
-  Código Android necesario para notificaciones locales confiables en background.
-
----
-
-## Estructura de carpetas
 ```bash
-awa-aquareminder/
-├─ app/
-│ ├─ main.py
-│ ├─ config.py
-│ ├─ models/
-│ │ ├─ intake.py
-│ │ ├─ user.py
-│ │ └─ reminder_settings.py
-│ ├─ services/
-│ │ ├─ db.py
-│ │ ├─ metrics.py
-│ │ ├─ reminders.py
-│ │ └─ notifications.py
-│ └─ ui/
-│   └─ pages/
-│      ├─ onboarding.py
-│      ├─ home.py
-│      ├─ history.py
-│      ├─ profile.py
-│      └─ settings.py
-├─ assets/
-│ ├─ icons/
-│ └─ images/
-├─ native/
-│ └─ android_ext_code/
-├─ tests/
-├─ requirements.txt
-├─ README.md
-└─ .gitignore
+git clone https://github.com/tu-usuario/awa-AquaReminder.git
+cd awa-AquaReminder
 ```
-**Explicaciones de carpetas clave:**
 
-| Carpeta | Contenido / responsabilidad |
-|--------|-----------------------------|
-| `app` | Código fuente principal de la aplicación. |
-| `config.py` | Constantes y estilos (paleta de colores, tamaños, etc.). |
-| `models/` | Definición de estructuras de datos: ingesta, usuario, ajustes de recordatorio. |
-| `services/db.py` | Persistencia local (SQLite): agregar ingesta, leer datos. |
-| `services/metrics.py` | Lógica de cálculo de IMC, promedios, streaks, etc. |
-| `services/reminders.py` | Lógica que decide cuándo debe recordarse beber agua. |
-| `services/notifications.py` | Interfaz/adapter para programar notificaciones (dev y nativa). |
-| `ui/pages/` | Páginas de la app (Views) renderizadas directamente; sin componentes separados. |
-| `native/android_ext_code/` | Código Android para manejar notificaciones locales confiables. |
+### Paso 2: Crear y activar entorno virtual
 
----
+**Windows:**
+```cmd
+python -m venv venv
+venv\Scripts\activate
+```
 
-## Patrones de UI: páginas en Flet (sin UserControl)
+**macOS/Linux:**
+```bash
+python3 -m venv venv
+source venv/bin/activate
+```
 
-- Construir cada pantalla como una función que retorna un `ft.View` o controles que se agregan a la `page`.
-- Sin `UserControl` ni carpeta de componentes; mantener la UI simple y directa por página.
-- Estilos compartidos desde `config.py` (colores, tamaños, espaciados) para consistencia visual.
-- Navegación con `page.go("/ruta")` y rutas claras (ej. `/`, `/onboarding/1..3`, `/settings`).
-- Mantener el layout sencillo (Column/Row/Container) y reutilizar patrones dentro de la misma página cuando sea necesario.
+### Paso 3: Instalar dependencias
 
----
+```bash
+pip install -r requirements.txt
+```
 
-## Estado y flujo entre páginas
+### Paso 4: Ejecutar la aplicación en modo desarrollo
 
-- Estado mínimo y local por página; evitar estados globales complejos cuando no sean necesarios.
-- Onboarding manejado por rutas (`/onboarding/1`, `/onboarding/2`, `/onboarding/3`) y lógica de botones siguiente/atrás.
-- Cuando se complete el onboarding, redirigir a `/` (home). Persistencia futura opcional si se requiere recordar la finalización entre sesiones.
-- Para casos más complejos (perfil, métricas), delegar lectura/escritura a `services/` y mantener la UI reactiva solo a datos cargados.
+```bash
+cd app
+flet run
+```
 
----
+### Paso 5: Ejecutar en dispositivo móvil
 
-## Servicios y separación de responsabilidades
+Para probar en dispositivo móvil conectado via USB:
+```bash
+flet run --android
+```
 
-- **DB**: todas las operaciones de lectura/escritura se hacen en `services/db.py` — la UI no accede directamente a la base de datos.  
-- **Metrics**: funciones puras para calcular IMC, promedios, streaks, valores históricos para gráficas.  
-- **Reminders**: lógica para calcular cuándo se debe disparar una notificación según configuración y última ingesta.  
-- **NotificationService**: adapter con implementación de desarrollo y otra nativa para Android.
+Para ejecutar en modo web (desarrollo):
+```bash
+flet run --web
+```
 
 ---
 
-## Notificaciones locales: estrategia y limitaciones
+## Versiones y compatibilidad
 
-- **Objetivo**: recordatorios funcionales incluso si la app está cerrada.  
-- **En desarrollo**: usar implementación de desarrollo para validar lógica, horarios, snooze.  
-- **Producción (Android)**: extensión nativa con `flutter_local_notifications` para programar notificaciones locales.  
-- **Permisos**: solicitar permisos al instalar o al iniciar app.  
-- **Limitaciones**: restricciones de batería, OEMs agresivos, permisos. Probar en dispositivos reales.
+| Tecnología | Versión utilizada | Notas |
+|------------|-------------------|-------|
+| **Python** | 3.9+ | Versión mínima requerida |
+| **Flet** | 0.28.3 | Versión actual del proyecto |
+| **Flutter** | 3.24.0+ | SDK interno de Flet |
+| **Serious Python** | 0.9.2 | Runtime de Python para Flutter |
 
----
+### Dependencias del proyecto
 
-## Flujo de desarrollo y checklist de validación
-
-1. Diseñar UI minimalista (páginas) + perfil + lógica de métricas.  
-2. Persistir datos con SQLite local.  
-3. Implementar recordatorios automáticos basados en la última ingesta (adapter dev).  
-4. Pantalla de “Ajustes” para intervalos, horarios permitidos, snooze, on/off.  
-5. Extensión Android y reemplazar adapter dev por implementación nativa.  
-6. Probar en dispositivo real: notificaciones con app cerrada/abierta + snooze.
-
-**Checklist mínimo:**
-
-- [ ] Registro de agua rápido (botones y entrada custom).  
-- [ ] Perfil con cálculo de IMC.  
-- [ ] Métricas: promedio semanal, streaks, gráfica.  
-- [ ] Progreso diario visible (barra + valor).  
-- [ ] Recordatorios locales con app cerrada.  
-- [ ] Permisos solicitados correctamente.  
-- [ ] Datos persistentes entre cierres / reinicios.
+El archivo `requirements.txt` contiene:
+- `flet==0.28.3` - Framework principal para la aplicación
 
 ---
 
-## Convenciones y buenas prácticas
+## Configuración importante para compilación
 
-- **Nomenclatura**: archivos en `snake_case`.  
-- **Páginas**: funciones simples que retornan Views/controles (sin `UserControl`).  
-- **Lógica fuera de UI**: UI para presentación + eventos; servicios hacen cálculos y persistencia.  
-- **Constantes/estilos** centralizados en `config.py`.  
-- **Estilo coherente**: colores, tipografía, márgenes uniformes.  
-- **Pruebas** mínimas para servicios/DB/metrics.  
-- **Documentación**: docstrings + comentarios clave.
+### Configuración de pubspec.yaml
 
----
+El proyecto incluye dos archivos importantes para la compilación:
 
-## Futuro / features fase 2
+1. **`pubspec_overrides.yaml`** (en la raíz del proyecto):
+```yaml
+dependency_overrides:
+  webview_flutter_android: ^3.16.7
+  wakelock_plus: ^1.2.10
+  web: ^1.0.0
+  window_manager: ^0.4.3
+```
 
-- Sincronización / respaldo en la nube.  
-- Recordatorios push remotos o ajustes vía servidor.  
-- Personalización avanzada de notificaciones.  
-- Más visuales y recomendaciones basadas en hábitos.
+2. **`build/flutter/pubspec.yaml`** (generado automáticamente por Flet):
+```yaml
+dependency_overrides:
+  webview_flutter_android: ^3.16.7
+  wakelock_plus: ^1.2.10
+  web: ^1.0.0
+  window_manager: ^0.4.3
+  flet: 0.28.3
+```
 
----
-
-## Referencias clave
-
-- Flet — rutas y navegación (`page.go`).  
-- Flet — build / publish Android (APK / AAB).  
-- `flutter_local_notifications` — notificaciones locales en Android.  
-- Librerías dev para notificaciones como fallback.
-
----
-
-**Licencia / privacidad**
-
-- Datos locales, sin cuentas de usuario.  
-- Permisos de notificación solicitados con una explicación clara del beneficio.
+**⚠️ CRÍTICO:** La configuración `webview_flutter_android: ^3.16.7` es esencial para evitar errores de compilación en Android. Esta debe estar presente en `pubspec_overrides.yaml` antes de compilar.
 
 ---
 
-*Fin del README*
+## Estructura del proyecto
+
+```
+awa-AquaReminder/
+├── app/                          # Código fuente principal
+│   ├── main.py                   # Punto de entrada de la aplicación
+│   ├── config.py                 # Configuración global (colores, diseño)
+│   ├── models/                   # Modelos de datos
+│   │   ├── intake.py            # Modelo de ingesta de agua
+│   │   ├── user.py              # Modelo de usuario/perfil
+│   │   └── reminder_settings.py # Configuración de recordatorios
+│   ├── services/                # Lógica de negocio
+│   │   ├── db.py                # Acceso a base de datos SQLite
+│   │   ├── metrics.py           # Cálculos de métricas e IMC
+│   │   ├── reminders.py         # Lógica de recordatorios
+│   │   └── notifications.py     # Servicio de notificaciones
+│   └── ui/                      # Interfaz de usuario
+│       └── pages/               # Páginas de la aplicación
+│           ├── home.py          # Página principal
+│           ├── history.py       # Historial de consumo
+│           ├── profile_setup.py # Configuración de perfil
+│           ├── settings.py      # Ajustes de la app
+│           └── onboarding.py    # Proceso de incorporación
+├── build/                       # Archivos de compilación Flutter
+│   └── flutter/
+│       └── pubspec.yaml         # Configuración Flutter generada
+├── pubspec_overrides.yaml       # Override de dependencias Flutter
+├── requirements.txt             # Dependencias Python
+└── README.md                    # Este archivo
+```
+
+---
+
+## Arquitectura de la aplicación
+
+### Capas de la aplicación
+
+1. **UI Layer** (`ui/pages/`)
+   - Páginas construidas como funciones que retornan `ft.View`
+   - Navegación basada en rutas con `page.go()`
+   - Sin componentes separados, UI directa por página
+
+2. **Services Layer** (`services/`)
+   - **DB**: Persistencia con SQLite local
+   - **Metrics**: Cálculos de IMC, promedios, streaks
+   - **Reminders**: Lógica de recordatorios automáticos
+   - **Notifications**: Interfaz para notificaciones locales
+
+3. **Models Layer** (`models/`)
+   - Estructuras de datos para ingesta, usuario y configuraciones
+   - Sin ORM, clases simples de Python
+
+4. **Config Layer** (`config.py`)
+   - Paleta de colores moderna
+   - Constantes de diseño (espaciados, tipografías)
+   - Utilidades de compatibilidad para diferentes versiones de Flet
+
+### Paleta de colores
+
+La aplicación utiliza una paleta moderna basada en gradientes:
+- **Dark Navy**: `#040513` (fondo principal)
+- **Coral Red**: `#FB5B4B` (botones primarios)
+- **Peach**: `#FBAD8C` (acentos)
+- **Vibrant Red**: `#E6433C` (alertas/progress)
+- **Dark Brown**: `#341F23` (textos secundarios)
+
+---
+
+## Patrones de UI
+
+### Principios de diseño
+
+- **Minimalismo funcional**: Interfaz limpia con acciones claras
+- **Mobile-first**: Diseño responsive optimizado para Android
+- **Iconografía intuitiva**: Botones con iconos visuales (vaso, botella, termo)
+- **Feedback inmediato**: Animaciones y estados visuales claros
+
+### Componentes principales
+
+1. **Botones de ingesta rápida**: Iconos con cantidad predefinida
+2. **Ingesta personalizada**: Modal para crear medidas custom con iconos
+3. **Barra de progreso**: Visualización del progreso diario
+4. **Navegación inferior**: Acceso rápido a todas las secciones
+5. **Cards de métricas**: Información organizada en tarjetas
+
+### Navegación
+
+- `/` - Página principal (home)
+- `/profile` - Configuración de perfil
+- `/history` - Historial de consumo
+- `/settings` - Ajustes de la aplicación
+- `/onboarding` - Proceso de configuración inicial
+
+---
+
+## Compilación para Android
+
+### Preparación del entorno
+
+1. **Verificar instalación de Flet:**
+   ```bash
+   flet doctor
+   ```
+
+2. **Asegurar configuración correcta:**
+   - Verificar que `pubspec_overrides.yaml` existe en la raíz
+   - Confirmar versiones en el archivo
+
+### Proceso de compilación
+
+1. **Build para desarrollo:**
+   ```bash
+   flet build apk
+   ```
+
+2. **Build para release:**
+   ```bash
+   flet build apk --release
+   ```
+
+3. **Build con configuración específica:**
+   ```bash
+   flet build apk --build-version 1.0.1 --build-number 2
+   ```
+
+### Archivos generados
+
+- APK de desarrollo: `dist/awa_aquareminder.apk`
+- APK de release: `dist/awa_aquareminder-release.apk`
+
+---
+
+## Funcionalidades implementadas
+
+### ✅ Core Features
+
+- [x] **Registro rápido de agua** - Botones visuales con cantidades predefinidas
+- [x] **Ingestas personalizadas** - Modal para crear medidas custom con iconos
+- [x] **Progreso diario** - Barra de progreso y contador en tiempo real
+- [x] **Perfil de usuario** - Peso, altura, cálculo automático de IMC
+- [x] **Historial completo** - Registro detallado de consumo con filtros
+- [x] **Métricas avanzadas** - Promedios, streaks, estadísticas semanales
+- [x] **Navegación fluida** - Rutas optimizadas y transiciones suaves
+- [x] **Diseño responsive** - Interfaz adaptable a diferentes tamaños de pantalla
+
+### ✅ UI/UX Enhancements
+
+- [x] **Paleta de colores moderna** - Esquema visual actualizado
+- [x] **Iconografía intuitiva** - Símbolos claros para cada acción
+- [x] **Feedback visual** - Animaciones y estados de botones
+- [x] **Layout optimizado** - Espaciado y tipografía consistentes
+
+### 🔄 En desarrollo
+
+- [ ] **Notificaciones locales** - Recordatorios automáticos
+- [ ] **Configuración de horarios** - Personalización de recordatorios
+- [ ] **Exportación de datos** - Backup y restore de información
+
+---
+
+## Solución de problemas
+
+### Errores comunes de instalación
+
+| Error | Causa | Solución |
+|-------|-------|----------|
+| `ModuleNotFoundError: No module named 'flet'` | Entorno virtual no activado | Activar venv: `venv\Scripts\activate` |
+| `flet: command not found` | Flet no instalado globalmente | Instalar: `pip install flet==0.28.3` |
+
+### Errores de compilación Android
+
+| Error | Causa | Solución |
+|-------|-------|----------|
+| `webview_flutter_android` version conflict | Versión incompatible | Verificar `pubspec_overrides.yaml` |
+| Build fails with dependency errors | Caché corrupto | `flet clean` y rebuild |
+| APK no instala en dispositivo | Permisos o firma | Habilitar "Unknown sources" |
+
+### Errores de runtime
+
+| Error | Causa | Solución |
+|-------|-------|----------|
+| `AttributeError: module 'flet' has no attribute 'X'` | Incompatibilidad versión | Verificar versión Flet 0.28.3 |
+| Base de datos no se crea | Permisos de escritura | Verificar permisos en directorio app |
+| UI se ve cortada en móvil | Layout no responsive | Revisar configuración de SafeArea |
+
+### Debugging
+
+Para debugging detallado:
+```bash
+flet run --verbose
+```
+
+Para logs específicos de Android:
+```bash
+flet run --android --verbose
+```
+
+---
+
+## Desarrollo futuro
+
+### Fase 2 - Features avanzadas
+
+- **Sincronización en la nube** - Backup automático de datos
+- **Notificaciones push** - Recordatorios remotos configurables
+- **Análisis predictivo** - Recomendaciones basadas en patrones
+- **Integración con wearables** - Conexión con smartwatches
+
+### Fase 3 - Expansión de plataforma
+
+- **Versión iOS** - Port completo para App Store
+- **Aplicación web** - PWA para uso en navegadores
+- **Desktop apps** - Versiones para Windows/macOS/Linux
+
+### Optimizaciones técnicas
+
+- **Performance** - Optimización de consultas DB y rendering
+- **Batería** - Reducción de consumo energético
+- **Tamaño APK** - Minimización de dependencias
+- **Accesibilidad** - Mejoras para usuarios con discapacidades
+
+---
+
+## Contribución y soporte
+
+### Para desarrolladores
+
+1. **Fork** del repositorio
+2. **Clone** del fork local
+3. **Branch** para nueva feature: `git checkout -b feature/nueva-funcionalidad`
+4. **Commit** cambios: `git commit -m "Add nueva funcionalidad"`
+5. **Push** al fork: `git push origin feature/nueva-funcionalidad`
+6. **Pull Request** al repositorio principal
+
+### Reportar bugs
+
+Crear un issue con:
+- Descripción detallada del problema
+- Pasos para reproducir
+- Screenshots (si aplica)
+- Información del dispositivo
+- Logs de error
+
+### Contacto
+
+- **Issues**: GitHub Issues para bugs y features
+- **Discusiones**: GitHub Discussions para preguntas generales
+
+---
+
+## Licencia
+
+Este proyecto está bajo licencia MIT. Ver `LICENSE` para detalles completos.
+
+### Privacidad
+
+- **Datos locales**: Toda la información se almacena localmente en el dispositivo
+- **Sin tracking**: No se recopilan datos de uso ni analytics
+- **Sin cuentas**: No requiere registro ni autenticación
+- **Permisos mínimos**: Solo se solicitan permisos esenciales (notificaciones)
+
+---
+
+**Desarrollado con ❤️ usando Flet + Python + Flutter**
+
+*Última actualización: Septiembre 2025*

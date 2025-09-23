@@ -78,7 +78,7 @@ def _bottom_nav(page: ft.Page):
     )
 
 
-def _quick_button(text: str, amount_ml: int, page: ft.Page, goal_ml: int, total_text: ft.Text, progress_bar: ft.ProgressBar, progress_text: ft.Text):
+def _drink_icon_button(icon, label: str, amount_ml: int, page: ft.Page, goal_ml: int, total_text: ft.Text, progress_bar: ft.ProgressBar, progress_text: ft.Text):
     def on_click(e):
         add_intake(amount_ml)
         # Feedback visual mejorado
@@ -102,26 +102,165 @@ def _quick_button(text: str, amount_ml: int, page: ft.Page, goal_ml: int, total_
         page.update()
     
     return ft.Container(
-        content=ft.Text(
-            text,
-            size=Design.FONT_SIZE_NORMAL,
-            weight=Colors.get_font_weight("SEMIBOLD"),
-            color=Colors.TEXT_LIGHT,
-            text_align=ft.TextAlign.CENTER,
-        ),
-        bgcolor=Colors.PRIMARY,
-        padding=ft.padding.symmetric(vertical=Design.SPACE_SM, horizontal=Design.SPACE_MD),
-        border_radius=Design.BORDER_RADIUS_LG,
+        content=ft.Column([
+            ft.Container(
+                content=ft.Icon(
+                    icon,
+                    size=Design.ICON_SIZE_XXL,
+                    color=Colors.TEXT_LIGHT,
+                ),
+                width=80,
+                height=80,
+                bgcolor=Colors.PRIMARY,
+                border_radius=Design.BORDER_RADIUS_XL,
+                alignment=ft.alignment.center,
+                shadow=ft.BoxShadow(
+                    spread_radius=0,
+                    blur_radius=16,
+                    color=ft.with_opacity(0.25, Colors.PRIMARY),
+                    offset=ft.Offset(0, 4),
+                ),
+            ),
+            ft.Container(height=Design.SPACE_XS),
+            ft.Text(
+                label,
+                size=Design.FONT_SIZE_SMALL,
+                weight=Colors.get_font_weight("SEMIBOLD"),
+                color=Colors.TEXT_PRIMARY,
+                text_align=ft.TextAlign.CENTER,
+            ),
+            ft.Text(
+                f"{amount_ml} ml",
+                size=Design.FONT_SIZE_CAPTION,
+                color=Colors.TEXT_SECONDARY,
+                text_align=ft.TextAlign.CENTER,
+            ),
+        ], spacing=0, horizontal_alignment=ft.CrossAxisAlignment.CENTER),
         on_click=on_click,
         ink=True,
-        shadow=ft.BoxShadow(
-            spread_radius=0,
-            blur_radius=12,
-            color=ft.with_opacity(0.3, Colors.PRIMARY),
-            offset=ft.Offset(0, 4),
-        ),
+        border_radius=Design.BORDER_RADIUS_LG,
+        padding=ft.padding.all(Design.SPACE_SM),
         expand=True,
-        alignment=ft.alignment.center,
+    )
+
+
+def _custom_intake_button(page: ft.Page, goal_ml: int, total_text: ft.Text, progress_bar: ft.ProgressBar, progress_text: ft.Text):
+    custom_amount = ft.TextField(
+        label="Cantidad (ml)",
+        hint_text="ej: 300",
+        width=120,
+        height=40,
+        border_radius=Design.BORDER_RADIUS_SM,
+        text_size=Design.FONT_SIZE_SMALL,
+        keyboard_type=ft.KeyboardType.NUMBER,
+        content_padding=ft.padding.symmetric(horizontal=Design.SPACE_SM, vertical=Design.SPACE_XS),
+    )
+    
+    custom_icon_selector = ft.Dropdown(
+        label="Icono",
+        width=120,
+        options=[
+            ft.dropdown.Option("local_cafe", "☕ Café"),
+            ft.dropdown.Option("local_bar", "🍺 Bebida"),
+            ft.dropdown.Option("sports_bar", "🥤 Refresco"),
+            ft.dropdown.Option("emoji_food_beverage", "🧃 Jugo"),
+            ft.dropdown.Option("water_drop", "💧 Agua"),
+            ft.dropdown.Option("local_drink", "🥛 Leche"),
+        ],
+        value="water_drop",
+        border_radius=Design.BORDER_RADIUS_SM,
+        text_size=Design.FONT_SIZE_SMALL,
+        content_padding=ft.padding.symmetric(horizontal=Design.SPACE_SM, vertical=Design.SPACE_XS),
+    )
+    
+    def add_custom_intake(e):
+        try:
+            amount = int(custom_amount.value or 0)
+            if amount > 0:
+                add_intake(amount)
+                
+                # Feedback visual
+                icon_map = {
+                    "local_cafe": ft.Icons.LOCAL_CAFE,
+                    "local_bar": ft.Icons.LOCAL_BAR,
+                    "sports_bar": ft.Icons.SPORTS_BAR,
+                    "emoji_food_beverage": ft.Icons.EMOJI_FOOD_BEVERAGE,
+                    "water_drop": ft.Icons.WATER_DROP,
+                    "local_drink": ft.Icons.LOCAL_DRINK,
+                }
+                selected_icon = icon_map.get(custom_icon_selector.value, ft.Icons.WATER_DROP)
+                
+                page.snack_bar = ft.SnackBar(
+                    content=ft.Row([
+                        ft.Icon(selected_icon, color=Colors.TEXT_LIGHT, size=Design.ICON_SIZE_MD),
+                        ft.Text(f"+{amount} ml registrados", color=Colors.TEXT_LIGHT, weight=Colors.get_font_weight("MEDIUM")),
+                    ], spacing=Design.SPACE_XS),
+                    bgcolor=Colors.SUCCESS,
+                    shape=ft.RoundedRectangleBorder(radius=Design.BORDER_RADIUS_SM),
+                )
+                page.snack_bar.open = True
+                
+                # Actualizar total y progreso
+                total = get_today_total()
+                total_text.value = f"{total:,} ml"
+                ratio = min(total / max(goal_ml, 1), 1.0)
+                progress_bar.value = ratio
+                progress_bar.color = Colors.SUCCESS if ratio >= 1.0 else Colors.PRIMARY
+                progress_text.value = f"{total:,} / {goal_ml:,} ml"
+                
+                # Limpiar campos
+                custom_amount.value = ""
+                page.update()
+            else:
+                page.snack_bar = ft.SnackBar(
+                    content=ft.Text("Ingresa una cantidad válida", color=Colors.TEXT_LIGHT),
+                    bgcolor=Colors.ERROR,
+                )
+                page.snack_bar.open = True
+                page.update()
+        except ValueError:
+            page.snack_bar = ft.SnackBar(
+                content=ft.Text("Ingresa solo números", color=Colors.TEXT_LIGHT),
+                bgcolor=Colors.ERROR,
+            )
+            page.snack_bar.open = True
+            page.update()
+    
+    return ft.Container(
+        content=ft.Column([
+            ft.Text(
+                "Personalizado",
+                size=Design.FONT_SIZE_NORMAL,
+                weight=Colors.get_font_weight("SEMIBOLD"),
+                color=Colors.TEXT_PRIMARY,
+                text_align=ft.TextAlign.CENTER,
+            ),
+            ft.Container(height=Design.SPACE_XS),
+            custom_amount,
+            ft.Container(height=Design.SPACE_XS),
+            custom_icon_selector,
+            ft.Container(height=Design.SPACE_SM),
+            ft.Container(
+                content=ft.Text(
+                    "Agregar",
+                    size=Design.FONT_SIZE_SMALL,
+                    weight=Colors.get_font_weight("SEMIBOLD"),
+                    color=Colors.TEXT_LIGHT,
+                    text_align=ft.TextAlign.CENTER,
+                ),
+                bgcolor=Colors.PRIMARY,
+                padding=ft.padding.symmetric(vertical=Design.SPACE_XS, horizontal=Design.SPACE_SM),
+                border_radius=Design.BORDER_RADIUS_SM,
+                on_click=add_custom_intake,
+                ink=True,
+                width=120,
+                alignment=ft.alignment.center,
+            ),
+        ], spacing=0, horizontal_alignment=ft.CrossAxisAlignment.CENTER),
+        padding=ft.padding.all(Design.SPACE_MD),
+        bgcolor=Colors.CARD_BACKGROUND,
+        border_radius=Design.BORDER_RADIUS_LG,
+        border=ft.border.all(1, Colors.BORDER),
     )
 
 
@@ -303,7 +442,7 @@ def create_home_page(page: ft.Page):
         ),
     )
 
-    # Acciones rápidas modernizadas
+    # Acciones rápidas con iconos modernos
     quick_actions = ft.Column([
         ft.Text(
             "Registrar consumo", 
@@ -313,12 +452,14 @@ def create_home_page(page: ft.Page):
         ),
         ft.Container(height=Design.SPACE_SM),
         ft.Row([
-            _quick_button("+250 ml", 250, page, goal_ml, total_text, progress_bar_functional, progress_text),
+            _drink_icon_button(ft.Icons.LOCAL_CAFE, "Vaso", 250, page, goal_ml, total_text, progress_bar_functional, progress_text),
             ft.Container(width=Design.SPACE_SM),
-            _quick_button("+350 ml", 350, page, goal_ml, total_text, progress_bar_functional, progress_text),
+            _drink_icon_button(ft.Icons.SPORTS_BAR, "Botella", 500, page, goal_ml, total_text, progress_bar_functional, progress_text),
             ft.Container(width=Design.SPACE_SM),
-            _quick_button("+500 ml", 500, page, goal_ml, total_text, progress_bar_functional, progress_text),
-        ]),
+            _drink_icon_button(ft.Icons.COFFEE, "Termo", 750, page, goal_ml, total_text, progress_bar_functional, progress_text),
+        ], alignment=ft.MainAxisAlignment.SPACE_EVENLY),
+        ft.Container(height=Design.SPACE_LG),
+        _custom_intake_button(page, goal_ml, total_text, progress_bar_functional, progress_text),
     ])
 
     # Tarjeta de sugerencias moderna
